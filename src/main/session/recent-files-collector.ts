@@ -1,23 +1,21 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { isMac, getRecentFilesDir } from '../platform';
 
 const execFileAsync = promisify(execFile);
 
-const RECENT_DIR = path.join(
-  os.homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Recent'
-);
+const RECENT_DIR = getRecentFilesDir();
 
 /**
  * Returns the actual target paths of recent files by resolving .lnk shortcuts
  * via PowerShell WScript.Shell.  Falls back to .lnk paths on error (Windows
  * still follows shortcuts when opened with shell.openPath).
  */
-export async function collectRecentFiles(): Promise<string[]> {
+async function collectRecentFilesWin(): Promise<string[]> {
   try {
-    if (!fs.existsSync(RECENT_DIR)) return [];
+    if (!RECENT_DIR || !fs.existsSync(RECENT_DIR)) return [];
 
     // Use PowerShell to resolve each .lnk to its actual target path
     const script =
@@ -46,10 +44,42 @@ export async function collectRecentFiles(): Promise<string[]> {
   }
 }
 
+/**
+ * Uses macOS Spotlight (mdfind) to find files modified in the last hour.
+ * Excludes hidden files, Library folders, and system paths.
+ */
+async function collectRecentFilesMac(): Promise<string[]> {
+  try {
+    // mdfind: Spotlight search for files modified in the last hour
+    // Exclude hidden files, library folders, and system paths
+    const { stdout } = await execFileAsync(
+      '/usr/bin/mdfind', [
+        '-onlyin', process.env.HOME || '/Users',
+        'kMDItemFSContentChangeDate >= $time.now(-3600) && kMDItemContentType != public.folder',
+      ],
+      { timeout: 8000, encoding: 'utf8' }
+    );
+
+    const home = process.env.HOME || '';
+    return stdout.trim().split('\n')
+      .filter(f => f && !f.includes('/Library/') && !f.startsWith('/System'))
+      .filter(f => f.startsWith(home)) // only files under home directory
+      .slice(0, 10);
+  } catch (e) {
+    console.error('[TK] recent-files-collector macOS error:', e);
+    return [];
+  }
+}
+
+/** Dispatches to the platform-specific recent-files collector. */
+export async function collectRecentFiles(): Promise<string[]> {
+  return isMac ? collectRecentFilesMac() : collectRecentFilesWin();
+}
+
 /** Fallback: returns the full paths of .lnk files in the Recent folder */
 function collectRecentFilesLnk(): string[] {
   try {
-    if (!fs.existsSync(RECENT_DIR)) return [];
+    if (!RECENT_DIR || !fs.existsSync(RECENT_DIR)) return [];
     return fs
       .readdirSync(RECENT_DIR)
       .filter(f => f.endsWith('.lnk'))

@@ -19,6 +19,7 @@ import * as fs   from 'fs';
 import * as os   from 'os';
 import * as path from 'path';
 import { app }   from 'electron';
+import { getBrowserHistoryPaths, BrowserProfile } from '../platform';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -44,31 +45,8 @@ function nowToChrome(): number {
 
 // ── History file paths ────────────────────────────────────────────────────────
 
-interface BrowserProfile {
-  name:    string;
-  history: string;
-}
-
 function getCandidates(): BrowserProfile[] {
-  const local = os.homedir();
-  return [
-    {
-      name:    'chrome',
-      history: path.join(local, 'AppData', 'Local', 'Google', 'Chrome', 'User Data', 'Default', 'History'),
-    },
-    {
-      name:    'edge',
-      history: path.join(local, 'AppData', 'Local', 'Microsoft', 'Edge', 'User Data', 'Default', 'History'),
-    },
-    {
-      name:    'brave',
-      history: path.join(local, 'AppData', 'Local', 'BraveSoftware', 'Brave-Browser', 'User Data', 'Default', 'History'),
-    },
-    {
-      name:    'chrome',
-      history: path.join(local, 'AppData', 'Local', 'Google', 'Chrome Beta', 'User Data', 'Default', 'History'),
-    },
-  ].filter(p => fs.existsSync(p.history));
+  return getBrowserHistoryPaths().filter(p => fs.existsSync(p.history));
 }
 
 // ── SQLite loader ─────────────────────────────────────────────────────────────

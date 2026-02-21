@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import { safeStorage } from 'electron';
+import { getAppDataDir, getDefaultShortcuts, isMac } from './platform';
 
-const CONFIG_DIR = path.join(os.homedir(), 'AppData', 'Roaming', 'ThreadKeeper');
+const CONFIG_DIR = getAppDataDir();
 const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 
 // ── HIGH-01: API key encryption helpers ──────────────────────────────────────
@@ -60,13 +60,16 @@ export interface AppConfig {
 
   // ── Privacy settings (LOW-04) ──
   clipboardCapture: boolean; // default: true — set false to opt out of clipboard capture
+
+  // ── i18n ──
+  language: string; // default: 'ja' — see SupportedLang in i18n/index.ts
 }
 
 const DEFAULTS: AppConfig = {
   googleApiKey: '',
   geminiModel: 'gemini-2.5-flash',
   openAtLogin: false,
-  defaultBrowser: 'edge',
+  defaultBrowser: isMac ? 'chrome' : 'edge',
   theme: 'system',
   // AI provider (new)
   aiProvider: 'gemini',
@@ -78,10 +81,12 @@ const DEFAULTS: AppConfig = {
   historyMinutesBack: 60,
   historyMode: 'fixed',
   // Shortcuts
-  captureShortcut: 'Ctrl+Shift+S',
-  openShortcut: 'Ctrl+Shift+R',
+  captureShortcut: getDefaultShortcuts().capture,
+  openShortcut: getDefaultShortcuts().open,
   // Privacy
   clipboardCapture: true,
+  // i18n
+  language: 'ja',
 };
 
 export function loadConfig(): AppConfig {

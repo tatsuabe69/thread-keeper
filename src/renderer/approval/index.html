@@ -162,40 +162,29 @@
     <div class="hdr-icon">🧠</div>
     <div class="hdr-text">
       <h1>ThreadKeeper</h1>
-      <p>作業文脈を保存しますか？</p>
+      <p data-i18n="approval_title">作業文脈を保存しますか？</p>
     </div>
     <div class="hdr-now" id="header-time"></div>
   </div>
 
   <div class="summary-card loading" id="summary">
-    <span class="spinner"></span>AI 推測を生成中…
+    <span class="spinner"></span><span data-i18n="approval_ai_loading">AI 推測を生成中…</span>
   </div>
 
   <div class="ctx-box" id="context-detail">
-    <span style="color:#1c1c3a">読み込み中…</span>
+    <span style="color:#1c1c3a" data-i18n="loading">読み込み中…</span>
   </div>
 
   <div class="note-wrap">
-    <span class="note-label">メモを追加（任意）</span>
-    <textarea id="note" placeholder="今やっていたことを補足メモ…"></textarea>
+    <span class="note-label" data-i18n="approval_note_label">メモを追加（任意）</span>
+    <textarea id="note" placeholder="今やっていたことを補足メモ…" data-i18n-placeholder="approval_note_placeholder"></textarea>
   </div>
 
   <div class="actions">
-    <button class="btn btn-skip" id="btn-skip">スキップ</button>
-    <button class="btn btn-approve" id="btn-approve">✓ 保存する</button>
+    <button class="btn btn-skip" id="btn-skip" data-i18n="approval_skip">スキップ</button>
+    <button class="btn btn-approve" id="btn-approve" data-i18n="approval_save">✓ 保存する</button>
   </div>
 
   <script src="approval.js"></script>
-  <script>
-    (function () {
-      const t = document.getElementById('header-time');
-      if (!t) return;
-      const now = new Date();
-      const d = ['日','月','火','水','木','金','土'];
-      const h = String(now.getHours()).padStart(2,'0');
-      const m = String(now.getMinutes()).padStart(2,'0');
-      t.innerHTML = now.getMonth()+1+'月'+now.getDate()+'日（'+d[now.getDay()]+'）<br>'+h+':'+m;
-    })();
-  </script>
 </body>
 </html>

@@ -142,21 +142,21 @@
   </style>
 </head>
 <body>
-  <h1>⚙️ 設定</h1>
+  <h1>⚙️ <span data-i18n="settings_title">設定</span></h1>
 
   <!-- API Key -->
   <div class="section">
-    <div class="section-title">Google AI API キー</div>
+    <div class="section-title" data-i18n="settings_ai_engine">Google AI API キー</div>
     <div class="key-row">
       <input type="password" id="api-key" placeholder="AIzaSy..." spellcheck="false" autocomplete="off" />
-      <button class="btn-primary" id="btn-save-key">保存</button>
+      <button class="btn-primary" id="btn-save-key" data-i18n="settings_save_test">保存</button>
     </div>
     <div class="status-inline" id="key-status"></div>
   </div>
 
   <!-- Browser -->
   <div class="section">
-    <div class="section-title">使用するブラウザ</div>
+    <div class="section-title" data-i18n="settings_browser">使用するブラウザ</div>
     <select id="browser-select">
       <option value="edge">Microsoft Edge</option>
       <option value="chrome">Google Chrome</option>
@@ -167,11 +167,11 @@
 
   <!-- Auto-start -->
   <div class="section">
-    <div class="section-title">起動設定</div>
+    <div class="section-title" data-i18n="settings_startup">起動設定</div>
     <div class="toggle-row">
       <div class="toggle-label">
-        Windows ログイン時に自動起動
-        <small>PC を起動したらトレイに常駐</small>
+        <span data-i18n="settings_autostart">Windows ログイン時に自動起動</span>
+        <small data-i18n="settings_autostart_desc">PC を起動したらトレイに常駐</small>
       </div>
       <label class="toggle">
         <input type="checkbox" id="toggle-autostart" />
@@ -182,21 +182,21 @@
 
   <!-- Shortcuts -->
   <div class="section">
-    <div class="section-title">ショートカットキー</div>
+    <div class="section-title" data-i18n="settings_shortcuts">ショートカットキー</div>
     <div class="shortcut-row">
-      <span>セッションを保存</span>
+      <span data-i18n="settings_shortcut_capture">セッションを保存</span>
       <span class="kbd">Ctrl + Shift + S</span>
     </div>
     <div class="shortcut-row">
-      <span>セッション一覧を開く</span>
+      <span data-i18n="settings_shortcut_open">セッション一覧を開く</span>
       <span class="kbd">Ctrl + Shift + R</span>
     </div>
   </div>
 
   <!-- Data -->
   <div class="section">
-    <div class="section-title">データ</div>
-    <button class="btn-secondary" id="btn-open-folder">📁 データフォルダを開く</button>
+    <div class="section-title" data-i18n="settings_data">データ</div>
+    <button class="btn-secondary" id="btn-open-folder" data-i18n="settings_data_open">📁 データフォルダを開く</button>
   </div>
 
   <script src="settings.js"></script>

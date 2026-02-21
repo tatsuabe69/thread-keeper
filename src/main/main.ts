@@ -15,6 +15,8 @@ import { generateSessionSummary, testAiConfig, TestAiConfig } from './ai/anthrop
 import { saveSession, loadAllSessions, loadSession, pruneOldSessions } from './session/session-store';
 import { loadConfig, saveConfig, isConfigured, migrateFromDotenv } from './config-store';
 import { startRelayServer } from './session/tab-relay-server';
+import { loadTranslations, clearTranslationCache, getAvailableLanguages, t } from './i18n';
+import { isMac, isWin, getAppDataDir, getDefaultShortcuts, getRecentFilesDir } from './platform';
 
 // ─── Single instance ──────────────────────────────────────────────────────────
 const gotTheLock = app.requestSingleInstanceLock();
@@ -24,7 +26,7 @@ if (!gotTheLock) { app.quit(); process.exit(0); }
 app.on('second-instance', () => {
   openMainWindow('sessions');
 });
-app.setAppUserModelId('com.threadkeeper.app');
+if (isWin) app.setAppUserModelId('com.threadkeeper.app');
 
 function rendererPath(...parts: string[]): string {
   return path.join(app.getAppPath(), 'src', 'renderer', ...parts);
@@ -90,7 +92,7 @@ function openSetupWindow(): void {
       sandbox: true,
     },
     resizable: false,
-    title: 'ThreadKeeper — セットアップ',
+    title: t(loadTranslations(loadConfig().language || 'ja'), 'setup_title'),
     alwaysOnTop: true,
   });
   setupWindow.setMenuBarVisibility(false);
@@ -131,7 +133,8 @@ async function captureSession(): Promise<void> {
   } catch (err) {
     console.error('[TK] Context capture error:', err);
     isCapturing = false;
-    if (mainWindow) mainWindow.webContents.send('capture-error', 'コンテキスト収集に失敗しました');
+    const errI18n = loadTranslations(loadConfig().language || 'ja');
+    if (mainWindow) mainWindow.webContents.send('capture-error', t(errI18n, 'err_capture_fail'));
     return;
   }
 
@@ -149,7 +152,7 @@ async function captureSession(): Promise<void> {
     }
   } catch (err) {
     console.error('[TK] AI error:', err);
-    const msg = 'AI推測の生成に失敗しました。手動でメモを入力してください。';
+    const msg = t(loadTranslations(loadConfig().language || 'ja'), 'err_ai_fail');
     if (pendingSession) {
       pendingSession.aiSummary = msg;
       if (mainWindow) mainWindow.webContents.send('session-summary-ready', msg);
@@ -184,20 +187,28 @@ function createTray(): void {
 function refreshTrayMenu(): void {
   if (!tray) return;
   const cfg = loadConfig();
+  const i18n = loadTranslations(cfg.language || 'ja');
   const captureKey = cfg.captureShortcut || 'Ctrl+Shift+S';
   const openKey    = cfg.openShortcut    || 'Ctrl+Shift+R';
   tray.setContextMenu(Menu.buildFromTemplate([
-    { label: `📸 セッションを保存  ${captureKey}`, click: () => captureSession() },
-    { label: `📋 セッション一覧    ${openKey}`,    click: () => openMainWindow('sessions') },
+    { label: `${t(i18n, 'tray_capture')}  ${captureKey}`, click: () => captureSession() },
+    { label: `${t(i18n, 'tray_sessions')}    ${openKey}`,    click: () => openMainWindow('sessions') },
     { type: 'separator' },
-    { label: '⚙️  設定', click: () => openMainWindow('settings') },
+    { label: t(i18n, 'tray_settings'), click: () => openMainWindow('settings') },
     { type: 'separator' },
-    { label: '終了', click: () => app.exit(0) },
+    { label: t(i18n, 'tray_quit'), click: () => app.exit(0) },
   ]));
 }
 
 // ─── IPC ──────────────────────────────────────────────────────────────────────
 function registerIpc(): void {
+  // ── i18n ──
+  ipcMain.handle('get-translations', () => {
+    const cfg = loadConfig();
+    return loadTranslations(cfg.language || 'ja');
+  });
+  ipcMain.handle('get-available-languages', () => getAvailableLanguages());
+
   // Initial tab for fresh window
   ipcMain.handle('get-initial-tab', () => initialTab);
 
@@ -246,17 +257,12 @@ function registerIpc(): void {
     }
 
     // ── App windows ──
-    const SKIP_PROCESSES = new Set([
-      'textinputhost', 'applicationframehost', 'shellexperiencehost',
-      'searchhost', 'lockapp', 'startmenuexperiencehost',
-      'nvidia overlay', 'nvcontainer',
-    ]);
-    const BROWSER_PROCESSES = new Set(['msedge', 'chrome', 'firefox', 'brave', 'opera', 'iexplore']);
+    const BROWSER_PROCESSES = new Set(['msedge', 'chrome', 'firefox', 'brave', 'opera', 'iexplore', 'safari']);
     const BROWSER_EXE: Record<string, string> = {
       'edge': 'msedge', 'chrome': 'chrome', 'firefox': 'firefox', 'brave': 'brave',
     };
     const cfg = loadConfig();
-    const preferredBrowser = BROWSER_EXE[cfg.defaultBrowser] ?? 'msedge';
+    const preferredBrowser = BROWSER_EXE[cfg.defaultBrowser] ?? (isMac ? 'safari' : 'msedge');
 
     const launched: string[] = [];
     const seen = new Set<string>();
@@ -264,33 +270,69 @@ function registerIpc(): void {
     // CRITICAL-02: Validate process names to prevent command injection
     const SAFE_PROCESS_NAME = /^[a-zA-Z0-9._\- ]+$/;
 
-    for (const win of session.windows) {
-      const nameLower = win.name.toLowerCase();
-      if (SKIP_PROCESSES.has(nameLower)) continue;
-      const processName = BROWSER_PROCESSES.has(nameLower) ? preferredBrowser : win.name;
-      if (!SAFE_PROCESS_NAME.test(processName)) continue; // reject suspicious names
-      const processLower = processName.toLowerCase();
-      if (seen.has(processLower)) continue;
-      seen.add(processLower);
-      try {
-        // Use safe parameter passing (no string interpolation into script)
-        const { stdout } = await execFileAsync('powershell', [
-          '-NoProfile', '-NonInteractive', '-Command',
-          '$name = $args[0]; ' +
-          '$p = Get-Process -Name $name -ErrorAction SilentlyContinue | ' +
-          'Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1; ' +
-          'if ($p) { ' +
-          '  Add-Type -Name U32 -Namespace W -MemberDefinition \'[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);\'; ' +
-          '  [W.U32]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; ' +
-          '  Write-Output "focused" ' +
-          '} else { ' +
-          '  Start-Process $name -ErrorAction SilentlyContinue; ' +
-          '  Write-Output "launched" ' +
-          '}',
-          processName,  // passed as $args[0], not interpolated
-        ], { timeout: 5000 });
-        launched.push(`${processName} (${stdout.trim()})`);
-      } catch { /* ignore */ }
+    if (isMac) {
+      // ── macOS: use osascript to activate / launch apps ──
+      const MAC_SKIP = new Set(['loginwindow', 'dock', 'finder', 'systemuiserver', 'spotlight']);
+
+      for (const win of session.windows) {
+        const nameLower = win.name.toLowerCase();
+        if (MAC_SKIP.has(nameLower)) continue;
+        if (BROWSER_PROCESSES.has(nameLower)) continue; // browsers restored via URL below
+        if (!SAFE_PROCESS_NAME.test(win.name)) continue;
+        if (seen.has(nameLower)) continue;
+        seen.add(nameLower);
+        try {
+          const script = `
+            tell application "${win.name.replace(/"/g, '\\"')}"
+              activate
+            end tell
+            return "focused"
+          `;
+          const { stdout } = await execFileAsync('/usr/bin/osascript', ['-e', script], { timeout: 5000 });
+          launched.push(`${win.name} (${stdout.trim()})`);
+        } catch {
+          // Try 'open -a' as fallback
+          try {
+            await execFileAsync('/usr/bin/open', ['-a', win.name], { timeout: 5000 });
+            launched.push(`${win.name} (launched)`);
+          } catch { /* ignore */ }
+        }
+      }
+    } else {
+      // ── Windows: use PowerShell to focus / launch processes ──
+      const WIN_SKIP = new Set([
+        'textinputhost', 'applicationframehost', 'shellexperiencehost',
+        'searchhost', 'lockapp', 'startmenuexperiencehost',
+        'nvidia overlay', 'nvcontainer',
+      ]);
+
+      for (const win of session.windows) {
+        const nameLower = win.name.toLowerCase();
+        if (WIN_SKIP.has(nameLower)) continue;
+        const processName = BROWSER_PROCESSES.has(nameLower) ? preferredBrowser : win.name;
+        if (!SAFE_PROCESS_NAME.test(processName)) continue;
+        const processLower = processName.toLowerCase();
+        if (seen.has(processLower)) continue;
+        seen.add(processLower);
+        try {
+          const { stdout } = await execFileAsync('powershell', [
+            '-NoProfile', '-NonInteractive', '-Command',
+            '$name = $args[0]; ' +
+            '$p = Get-Process -Name $name -ErrorAction SilentlyContinue | ' +
+            'Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1; ' +
+            'if ($p) { ' +
+            '  Add-Type -Name U32 -Namespace W -MemberDefinition \'[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);\'; ' +
+            '  [W.U32]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; ' +
+            '  Write-Output "focused" ' +
+            '} else { ' +
+            '  Start-Process $name -ErrorAction SilentlyContinue; ' +
+            '  Write-Output "launched" ' +
+            '}',
+            processName,
+          ], { timeout: 5000 });
+          launched.push(`${processName} (${stdout.trim()})`);
+        } catch { /* ignore */ }
+      }
     }
 
     // ── Browser URLs (from browserTabs or legacy browserUrls) ──
@@ -320,11 +362,18 @@ function registerIpc(): void {
   ipcMain.handle('save-config', (_e, patch: Partial<import('./config-store').AppConfig>) => {
     const updated = saveConfig(patch);
     app.setLoginItemSettings({ openAtLogin: updated.openAtLogin });
+
+    // Clear i18n cache if language changed
+    if ('language' in patch) {
+      clearTranslationCache();
+    }
+
     // Re-register shortcuts if they changed
+    const shortcutDefaults = getDefaultShortcuts();
     if ('captureShortcut' in patch || 'openShortcut' in patch) {
       registerShortcuts(
-        updated.captureShortcut || 'Ctrl+Shift+S',
-        updated.openShortcut    || 'Ctrl+Shift+R'
+        updated.captureShortcut || shortcutDefaults.capture,
+        updated.openShortcut    || shortcutDefaults.open
       );
     } else {
       refreshTrayMenu();
@@ -344,8 +393,7 @@ function registerIpc(): void {
     return testAiConfig({ provider: 'gemini', googleApiKey: key, model: modelName });
   });
   ipcMain.handle('open-data-folder', async () => {
-    const { homedir } = await import('os');
-    await shell.openPath(path.join(homedir(), 'AppData', 'Roaming', 'ThreadKeeper'));
+    await shell.openPath(getAppDataDir());
   });
 
   ipcMain.handle('open-extension-folder', () => {
@@ -364,22 +412,21 @@ function registerIpc(): void {
 
   ipcMain.handle('open-path', async (_e, filePath: string) => {
     if (!filePath) return;
-    const { homedir } = await import('os');
-    const home = homedir();
+    const os = await import('os');
+    const home = os.homedir();
     if (path.isAbsolute(filePath)) {
       // HIGH-03: Normalize and restrict to home directory
       const normalized = path.normalize(filePath);
       if (!normalized.startsWith(home)) return; // block path traversal
       shell.openPath(normalized);
-    } else {
-      // Legacy: only filename stored — open the .lnk in Recent folder
+    } else if (isWin) {
+      // Windows legacy: only filename stored — open the .lnk in Recent folder
+      const recentDir = getRecentFilesDir();
+      if (!recentDir) return;
       const safeName = path.basename(filePath); // strip any ../ attempts
-      const lnk = path.join(
-        home, 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Recent',
-        safeName + '.lnk'
-      );
-      shell.openPath(lnk);
+      shell.openPath(path.join(recentDir, safeName + '.lnk'));
     }
+    // On macOS, recent files are stored as absolute paths — no .lnk fallback needed
   });
 
   ipcMain.handle('write-clipboard', async (_e, text: string) => {
@@ -402,9 +449,10 @@ app.whenReady().then(() => {
 
   const config = loadConfig();
   app.setLoginItemSettings({ openAtLogin: config.openAtLogin });
+  const defaults = getDefaultShortcuts();
   registerShortcuts(
-    config.captureShortcut || 'Ctrl+Shift+S',
-    config.openShortcut    || 'Ctrl+Shift+R'
+    config.captureShortcut || defaults.capture,
+    config.openShortcut    || defaults.open
   );
   if (!isConfigured()) {
     openSetupWindow();

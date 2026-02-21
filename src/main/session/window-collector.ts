@@ -1,5 +1,6 @@
 import { execFile } from 'child_process';
 import { promisify } from 'util';
+import { isMac } from '../platform';
 
 const execFileAsync = promisify(execFile);
 
@@ -8,7 +9,7 @@ export interface WindowInfo {
   title: string;
 }
 
-export async function collectWindows(): Promise<WindowInfo[]> {
+async function collectWindowsWin(): Promise<WindowInfo[]> {
   try {
     const { stdout } = await execFileAsync(
       'powershell',
@@ -47,4 +48,53 @@ export async function collectWindows(): Promise<WindowInfo[]> {
     console.error('[TK] window-collector error:', e);
     return [];
   }
+}
+
+async function collectWindowsMac(): Promise<WindowInfo[]> {
+  try {
+    const script = `
+      set output to ""
+      tell application "System Events"
+        set procs to every process whose visible is true
+        repeat with p in procs
+          set pName to name of p
+          try
+            set wins to every window of p
+            repeat with w in wins
+              set wTitle to name of w
+              if wTitle is not "" then
+                set output to output & pName & "\\t" & wTitle & "\\n"
+              end if
+            end repeat
+          on error
+            -- some processes don't allow window access
+          end try
+        end repeat
+      end tell
+      return output
+    `;
+
+    const { stdout } = await execFileAsync(
+      '/usr/bin/osascript', ['-e', script],
+      { timeout: 10000, encoding: 'utf8' }
+    );
+
+    const trimmed = stdout.trim();
+    if (!trimmed) return [];
+
+    return trimmed.split('\n')
+      .filter(Boolean)
+      .map(line => {
+        const [name, ...rest] = line.split('\t');
+        return { name: name || '', title: rest.join('\t') || '' };
+      })
+      .filter(w => w.title.length > 0);
+  } catch (e) {
+    console.error('[TK] window-collector macOS error:', e);
+    return [];
+  }
+}
+
+export async function collectWindows(): Promise<WindowInfo[]> {
+  return isMac ? collectWindowsMac() : collectWindowsWin();
 }

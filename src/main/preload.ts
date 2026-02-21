@@ -9,6 +9,10 @@ import { contextBridge, ipcRenderer } from 'electron';
 
 // Only expose what renderers actually need — no raw Node.js access
 contextBridge.exposeInMainWorld('electronAPI', {
+  // ── i18n ──────────────────────────────────────────────────────────────────────
+  getTranslations:       ()                          => ipcRenderer.invoke('get-translations'),
+  getAvailableLanguages: ()                          => ipcRenderer.invoke('get-available-languages'),
+
   // ── Invoke (request-response) ──────────────────────────────────────────────
   getInitialTab:      ()                          => ipcRenderer.invoke('get-initial-tab'),
   getPendingSession:  ()                          => ipcRenderer.invoke('get-pending-session'),

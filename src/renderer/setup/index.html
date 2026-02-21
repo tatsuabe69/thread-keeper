@@ -121,7 +121,7 @@
       <div class="logo-badge">🧠</div>
       <div class="logo-text">
         <h1>ThreadKeeper</h1>
-        <p>作業文脈を保存・復元するデスクトップアプリ</p>
+        <p data-i18n="app_desc">作業文脈を保存・復元するデスクトップアプリ</p>
       </div>
     </div>
 
@@ -129,7 +129,7 @@
 
     <!-- API Key -->
     <div>
-      <span class="field-label">🔑 Google AI Studio API キー</span>
+      <span class="field-label" data-i18n="setup_api_label">🔑 Google AI Studio API キー</span>
       <input
         type="password"
         id="api-key"
@@ -146,7 +146,7 @@
 
     <!-- Browser selection -->
     <div>
-      <span class="field-label">🌐 使用するブラウザ</span>
+      <span class="field-label" data-i18n="setup_browser_label">🌐 使用するブラウザ</span>
       <select id="browser-select">
         <option value="edge">Microsoft Edge</option>
         <option value="chrome">Google Chrome</option>
@@ -157,8 +157,8 @@
 
     <div class="status" id="status"></div>
 
-    <button class="btn-primary" id="btn-save">接続テスト &amp; 保存</button>
-    <div class="skip-link" id="btn-skip">スキップ（後で設定する）</div>
+    <button class="btn-primary" id="btn-save" data-i18n="setup_save">接続テスト &amp; 保存</button>
+    <div class="skip-link" id="btn-skip" data-i18n="setup_skip">スキップ（後で設定する）</div>
   </div>
 
   <script src="setup.js"></script>

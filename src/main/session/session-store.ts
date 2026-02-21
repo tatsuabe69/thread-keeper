@@ -1,12 +1,12 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { BrowserTab } from './browser-collector';
 import { HistoryEntry } from './history-collector';
+import { getAppDataDir } from '../platform';
 
-const APP_DIR = path.join(os.homedir(), 'AppData', 'Roaming', 'ThreadKeeper');
+const APP_DIR = getAppDataDir();
 const DATA_DIR = path.join(APP_DIR, 'sessions');
 const INDEX_FILE = path.join(APP_DIR, 'index.json');
 const HMAC_KEY_FILE = path.join(APP_DIR, '.hmac-key');

@@ -16,7 +16,7 @@ import * as http from 'http';
 import * as crypto from 'crypto';
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { getAppDataDir } from '../platform';
 
 export interface RelayTab {
   url: string;
@@ -27,7 +27,7 @@ export interface RelayTab {
 
 const RELAY_PORT = 9224;
 const MAX_BODY_BYTES = 1 * 1024 * 1024; // MEDIUM-02: 1 MB limit
-const TOKEN_FILE = path.join(os.homedir(), 'AppData', 'Roaming', 'ThreadKeeper', '.relay-token');
+const TOKEN_FILE = path.join(getAppDataDir(), '.relay-token');
 
 let latestTabs: RelayTab[] = [];
 let server: http.Server | null = null;

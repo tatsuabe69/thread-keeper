@@ -7,6 +7,44 @@ let config = {};
 let pendingSession = null;
 let isCollecting = false; // true while context is being collected (before pendingSession is set)
 let currentLayout = localStorage.getItem('ck-layout') || 'cards';
+let i18n = {}; // loaded translations
+
+// ─── i18n ─────────────────────────────────────────────────────────────────────
+function t(key, params) {
+  let val = i18n[key];
+  if (val === undefined || val === null) return key;
+  if (typeof val !== 'string') return String(val);
+  if (params) {
+    for (const [k, v] of Object.entries(params)) {
+      val = val.replace(new RegExp('\\{' + k + '\\}', 'g'), String(v));
+    }
+  }
+  return val;
+}
+
+/** Apply translations to elements with data-i18n attribute */
+function applyTranslations() {
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.dataset.i18n;
+    const val = i18n[key];
+    if (val && typeof val === 'string') el.textContent = val;
+  });
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.dataset.i18nHtml;
+    const val = i18n[key];
+    if (val && typeof val === 'string') el.innerHTML = val;
+  });
+  document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+    const key = el.dataset.i18nPlaceholder;
+    const val = i18n[key];
+    if (val && typeof val === 'string') el.placeholder = val;
+  });
+  document.querySelectorAll('[data-i18n-label]').forEach(el => {
+    const key = el.dataset.i18nLabel;
+    const val = i18n[key];
+    if (val && typeof val === 'string') el.label = val;
+  });
+}
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
 function esc(str) {
@@ -18,12 +56,13 @@ function esc(str) {
 
 function formatDate(iso) {
   const d = new Date(iso);
-  const w = ['日','月','火','水','木','金','土'][d.getDay()];
+  const weekdays = i18n.weekdays || ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  const w = weekdays[d.getDay()];
   const h = String(d.getHours()).padStart(2,'0');
   const m = String(d.getMinutes()).padStart(2,'0');
   return {
-    time: h + ':' + m,
-    date: (d.getMonth()+1) + '月' + d.getDate() + '日（' + w + '）',
+    time: t('time_format', { h, m }),
+    date: t('date_format', { month: d.getMonth()+1, day: d.getDate(), weekday: w }),
   };
 }
 
@@ -47,7 +86,11 @@ function makeTags(s) {
  */
 function formatSummary(text) {
   if (!text) return '';
-  const isStructured = /^作業内容[：:]/.test(text.trim()) || text.includes('\n作業内容');
+  // Detect structured format by checking for known label patterns across languages
+  const taskLabel = t('ai_label_task');   // 作業内容 / Task
+  const refsLabel = t('ai_label_refs');   // 参照中 / References
+  const isStructured = new RegExp('^' + taskLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[：:]', 'm').test(text.trim())
+    || /^作業内容[：:]/.test(text.trim()) || /^Task[：:]/m.test(text.trim());
   if (!isStructured) {
     // Plain text: insert <br> after 。 for readability
     const withBreaks = esc(text).replace(/。(?!<br>)/g, '。<br>');
@@ -56,12 +99,12 @@ function formatSummary(text) {
   const lines = text.split('\n').map(l => l.trim()).filter(Boolean);
   let html = '<dl class="summary-struct">';
   for (const line of lines) {
-    // Match "ラベル：value" where label is 2-6 chars before the colon
-    const m = line.match(/^(.{2,6})[：:]\s*(.*)/);
+    // Match "ラベル：value" or "Label: value"
+    const m = line.match(/^(.{1,20}?)[：:]\s*(.*)/);
     if (m) {
-      const label = m[1];
+      const label = m[1].trim();
       const value = m[2];
-      if (label === '参照中') {
+      if (label === refsLabel || label === '参照中' || label === 'References') {
         // Split by " / " and show each item on its own line
         const refs = value.split(/\s*\/\s*/).filter(Boolean);
         const refsHtml = refs.map(r => '<span class="ss-ref-item">' + esc(r) + '</span>').join('');
@@ -85,22 +128,25 @@ function formatSummary(text) {
  */
 function getSummaryPreview(text) {
   if (!text) return '';
-  const m = text.match(/作業内容[：:]\s*(.+)/);
+  // Try to match the task label in any language
+  const taskLabel = t('ai_label_task');
+  const re = new RegExp(taskLabel.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '[：:]\\s*(.+)');
+  const m = text.match(re) || text.match(/作業内容[：:]\s*(.+)/) || text.match(/Task[：:]\s*(.+)/);
   return m ? m[1].trim() : text;
 }
 
-/** Returns today / 昨日 / 〇曜日 / M月D日 label for timeline grouping */
+/** Returns today / yesterday / weekday / M/D label for timeline grouping */
 function dayGroupLabel(iso) {
   const d    = new Date(iso);
   const dDay = new Date(d.getFullYear(), d.getMonth(), d.getDate());
   const now  = new Date();
   const tDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
   const diff = Math.round((tDay - dDay) / 86400000);
-  if (diff === 0) return '今日';
-  if (diff === 1) return '昨日';
-  const wdays = ['日','月','火','水','木','金','土'];
-  if (diff < 7) return wdays[d.getDay()] + '曜日';
-  return (d.getMonth()+1) + '月' + d.getDate() + '日';
+  if (diff === 0) return t('today');
+  if (diff === 1) return t('yesterday');
+  const weekdays = i18n.weekdays || ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  if (diff < 7) return weekdays[d.getDay()] + t('weekday_suffix');
+  return t('date_month_day', { month: d.getMonth()+1, day: d.getDate() });
 }
 
 // ─── Theme ────────────────────────────────────────────────────────────────────
@@ -137,8 +183,8 @@ function clearBadge(tab) {
 
 const DOMAIN_INFO = {
   'youtube.com':            { label: 'YouTube',        icon: '📺' },
-  'google.com':             { label: 'Google 検索',     icon: '🔍' },
-  'google.co.jp':           { label: 'Google 検索',     icon: '🔍' },
+  'google.com':             { label: null, icon: '🔍', i18nKey: 'domain_google_search' },
+  'google.co.jp':           { label: null, icon: '🔍', i18nKey: 'domain_google_search' },
   'github.com':             { label: 'GitHub',          icon: '💻' },
   'stackoverflow.com':      { label: 'Stack Overflow',  icon: '💬' },
   'twitter.com':            { label: 'X (Twitter)',     icon: '🐦' },
@@ -172,9 +218,16 @@ function getHostname(url) {
 }
 
 function getDomainInfo(hostname) {
-  if (DOMAIN_INFO[hostname]) return DOMAIN_INFO[hostname];
-  for (const [key, val] of Object.entries(DOMAIN_INFO)) {
-    if (hostname === key || hostname.endsWith('.' + key)) return val;
+  let info = DOMAIN_INFO[hostname];
+  if (!info) {
+    for (const [key, val] of Object.entries(DOMAIN_INFO)) {
+      if (hostname === key || hostname.endsWith('.' + key)) { info = val; break; }
+    }
+  }
+  if (info) {
+    // Resolve i18n label if needed
+    const label = info.i18nKey ? t(info.i18nKey) : (info.label || hostname);
+    return { label, icon: info.icon };
   }
   const name = hostname.split('.')[0] || hostname;
   return { label: name.charAt(0).toUpperCase() + name.slice(1), icon: '🌐' };
@@ -202,9 +255,9 @@ function extractSearchQuery(url) {
 
 function formatRelTime(ms) {
   const mins = Math.round((Date.now() - ms) / 60000);
-  if (mins < 1) return 'たった今';
-  if (mins < 60) return mins + '分前';
-  return Math.round(mins / 60) + '時間前';
+  if (mins < 1) return t('time_ago_now');
+  if (mins < 60) return t('time_ago_min', { n: mins });
+  return t('time_ago_hour', { n: Math.round(mins / 60) });
 }
 
 /**
@@ -260,7 +313,7 @@ function buildHistoryGroupsHtml(groups, prefix, autoExpandThreshold = 3) {
     const collapseId  = prefix + '-hg-' + idx;
     const isExpanded  = g.totalCount <= autoExpandThreshold;
     const relTime     = formatRelTime(g.lastVisitMs);
-    const countBadge  = g.totalCount + 'ページ';
+    const countBadge  = t('page_count', { n: g.totalCount });
 
     let entriesHtml = '';
 
@@ -268,7 +321,7 @@ function buildHistoryGroupsHtml(groups, prefix, autoExpandThreshold = 3) {
     if (g.searches.length > 0) {
       entriesHtml += g.searches.map(s =>
         `<li class="hentry hentry--search">
-          <span class="hentry-search-label">🔍「${esc(s.searchQuery)}」を検索</span>
+          <span class="hentry-search-label">${t('detail_search', { q: esc(s.searchQuery) })}</span>
           <span class="hentry-time">${formatRelTime(new Date(s.visitedAt).getTime())}</span>
         </li>`
       ).join('');
@@ -285,7 +338,7 @@ function buildHistoryGroupsHtml(groups, prefix, autoExpandThreshold = 3) {
           <span class="hentry-time">${formatRelTime(new Date(p.visitedAt).getTime())}</span>
         </li>`;
       }).join('');
-      if (more > 0) entriesHtml += `<li class="hentry hentry--more">… 他 ${more} ページ</li>`;
+      if (more > 0) entriesHtml += `<li class="hentry hentry--more">${t('detail_more_pages', { n: more })}</li>`;
     }
 
     return `<div class="hgroup">
@@ -317,10 +370,10 @@ function buildDetailHtml(s) {
     const items = s.windows.slice(0, 6);
     const more  = s.windows.length - items.length;
     let li = items.map(w => '<li>' + esc(w.title) + '</li>').join('');
-    if (more > 0) li += '<li class="detail-more">…他 ' + more + ' ウィンドウ</li>';
+    if (more > 0) li += '<li class="detail-more">' + t('detail_more_windows', { n: more }) + '</li>';
     sections.push(
       '<div class="detail-section">' +
-        '<div class="detail-section-title">ウィンドウ</div>' +
+        '<div class="detail-section-title">' + t('detail_windows') + '</div>' +
         '<ul class="detail-list">' + li + '</ul>' +
       '</div>'
     );
@@ -333,10 +386,10 @@ function buildDetailHtml(s) {
       const name = (f.split(/[/\\]/).pop() || f).replace(/\.lnk$/i, '');
       return '<li><a class="file-link" href="#" data-path="' + esc(f) + '" title="' + esc(f) + '">' + esc(name) + '</a></li>';
     }).join('');
-    if (more > 0) li += '<li class="detail-more">…他 ' + more + ' ファイル</li>';
+    if (more > 0) li += '<li class="detail-more">' + t('detail_more_files', { n: more }) + '</li>';
     sections.push(
       '<div class="detail-section">' +
-        '<div class="detail-section-title">最近のファイル</div>' +
+        '<div class="detail-section-title">' + t('detail_recent_files') + '</div>' +
         '<ul class="detail-list">' + li + '</ul>' +
       '</div>'
     );
@@ -365,10 +418,10 @@ function buildDetailHtml(s) {
         '<span class="tab-title">' + label + '</span>' + sub +
       '</a></li>';
     }).join('');
-    if (more > 0) li += '<li class="detail-more">…他 ' + more + ' タブ</li>';
+    if (more > 0) li += '<li class="detail-more">' + t('detail_more_tabs', { n: more }) + '</li>';
     urlsHtml =
       '<div class="detail-urls">' +
-        '<div class="detail-section-title">ブラウザで開いていたタブ</div>' +
+        '<div class="detail-section-title">' + t('detail_browser_tabs') + '</div>' +
         '<ul class="detail-list url-list">' + li + '</ul>' +
       '</div>';
   }
@@ -381,7 +434,7 @@ function buildDetailHtml(s) {
     const groupsHtml = buildHistoryGroupsHtml(groups, 'card-' + (s.id || Math.random().toString(36).slice(2)));
     historyHtml =
       '<div class="detail-history">' +
-        '<div class="detail-section-title">🕐 閲覧履歴（' + history.length + ' ページ）</div>' +
+        '<div class="detail-section-title">' + t('detail_history', { n: history.length }) + '</div>' +
         groupsHtml +
       '</div>';
   }
@@ -392,13 +445,13 @@ function buildDetailHtml(s) {
     const suffix = s.clipboard.trim().length > 300 ? '…' : '';
     clipHtml =
       '<div class="detail-clip">' +
-        '<div class="detail-section-title">クリップボード</div>' +
+        '<div class="detail-section-title">' + t('detail_clipboard') + '</div>' +
         '<pre class="clip-pre">' + esc(clip) + suffix + '</pre>' +
       '</div>';
   }
 
   if (sections.length === 0 && !urlsHtml && !historyHtml && !clipHtml) {
-    return '<p style="color:var(--text-3);font-size:12px;padding:0 2px">詳細なし</p>';
+    return '<p style="color:var(--text-3);font-size:12px;padding:0 2px">' + t('detail_none') + '</p>';
   }
 
   // Top: 2-col grid for windows + files; URLs + history + clipboard are full-width below
@@ -423,13 +476,13 @@ function renderCardsLayout(listEl) {
           <span class="card-time">${time}</span>
           <span class="card-date">${date}</span>
           <span class="card-tags">${tags}</span>
-          <button class="btn-restore" data-id="${esc(s.id)}">復元する →</button>
+          <button class="btn-restore" data-id="${esc(s.id)}">${t('restore_btn')}</button>
         </div>
         <div class="card-summary">${formatSummary(s.aiSummary)}</div>
         ${s.userNote ? '<p class="card-note">' + esc(s.userNote) + '</p>' : ''}
       </div>
       <div class="card-foot">
-        <button class="card-expand-btn" data-expand="${esc(s.id)}">▸ 詳細を見る</button>
+        <button class="card-expand-btn" data-expand="${esc(s.id)}">${t('detail_expand')}</button>
       </div>
       <div class="card-detail" id="detail-${esc(s.id)}">${buildDetailHtml(s)}</div>
       <div class="restore-result" id="result-${esc(s.id)}"></div>
@@ -454,7 +507,7 @@ function renderListLayout(listEl) {
         <div class="lr-summary">${esc(getSummaryPreview(s.aiSummary))}</div>
       </div>
       <div class="lr-restore-wrap">
-        <button class="btn-restore" data-id="${esc(s.id)}">復元する →</button>
+        <button class="btn-restore" data-id="${esc(s.id)}">${t('restore_btn')}</button>
       </div>
     </div>
     <div class="list-detail" id="list-detail-${esc(s.id)}">${buildDetailHtml(s)}</div>
@@ -489,11 +542,11 @@ function renderTimelineLayout(listEl) {
         <div class="tl-body">
           <div class="tl-header">
             <span class="tl-time">${time}</span>${tags}
-            <button class="btn-restore" data-id="${esc(s.id)}" style="margin-left:auto">復元する →</button>
+            <button class="btn-restore" data-id="${esc(s.id)}" style="margin-left:auto">${t('restore_btn')}</button>
           </div>
           <div class="tl-summary">${formatSummary(s.aiSummary)}</div>
           ${s.userNote ? '<div class="tl-note">' + esc(s.userNote) + '</div>' : ''}
-          <button class="tl-expand-btn" data-expand="${esc(s.id)}">▸ 詳細を見る</button>
+          <button class="tl-expand-btn" data-expand="${esc(s.id)}">${t('detail_expand')}</button>
           <div class="tl-detail" id="tl-detail-${esc(s.id)}">${buildDetailHtml(s)}</div>
           <div class="restore-result" id="result-${esc(s.id)}"></div>
         </div>
@@ -519,13 +572,13 @@ function renderSessions() {
     listEl.innerHTML = `
       <div class="empty-state">
         <div class="empty-icon">▤</div>
-        <p class="empty-title">まだセッションがありません</p>
-        <p class="empty-hint"><kbd>${esc(captureKey)}</kbd> を押してセッションを保存できます</p>
+        <p class="empty-title">${t('empty_title')}</p>
+        <p class="empty-hint">${t('empty_hint', { key: '<kbd>' + esc(captureKey) + '</kbd>' })}</p>
       </div>`;
     return;
   }
 
-  if (countEl) countEl.textContent = sessions.length + ' 件';
+  if (countEl) countEl.textContent = t('session_count', { n: sessions.length });
 
   if (currentLayout === 'list')          renderListLayout(listEl);
   else if (currentLayout === 'timeline') renderTimelineLayout(listEl);
@@ -534,40 +587,41 @@ function renderSessions() {
 
 async function handleRestore(id, btn) {
   btn.disabled = true;
-  btn.textContent = '復元中…';
+  btn.textContent = t('restoring');
   const result = await window.electronAPI.restoreSession(id);
 
   const resultEl = document.getElementById('result-' + id);
 
   if (!result || !result.success) {
-    btn.textContent = '❌ 失敗';
+    btn.textContent = t('restore_fail');
     setTimeout(() => {
       btn.disabled = false;
-      btn.textContent = '復元する →';
+      btn.textContent = t('restore_btn');
     }, 2500);
     return;
   }
 
   const lines = [];
-  if (result.clipboardRestored) lines.push('📋 クリップボードを復元しました');
+  if (result.clipboardRestored) lines.push(t('restore_clipboard'));
   if (result.launched && result.launched.length > 0) {
+    const joiner = (i18n.ai_joiner) || '、';
     const apps = result.launched.map(l => {
       const name = l.split(' ')[0];
-      return name + (l.includes('focused') ? ' をフォーカス' : ' を起動');
+      return name + (l.includes('focused') ? ' ' + t('restore_focus') : ' ' + t('restore_launch'));
     });
-    lines.push('🪟 ' + apps.join('、'));
+    lines.push('🪟 ' + apps.join(joiner));
   }
   if (result.urlsOpened && result.urlsOpened > 0) {
-    lines.push('🌐 ' + result.urlsOpened + ' 件のURLをブラウザで開きました');
+    lines.push(t('restore_urls', { n: result.urlsOpened }));
   }
-  if (lines.length === 0) lines.push('ℹ️ コンテキストを確認しました');
+  if (lines.length === 0) lines.push(t('restore_confirmed'));
 
   // Setting innerHTML triggers :empty to disappear; clearing it hides again
   resultEl.innerHTML = lines.map(l => '<div>' + esc(l) + '</div>').join('');
-  btn.textContent = '✅ 完了';
+  btn.textContent = t('restore_done');
   setTimeout(() => {
     btn.disabled = false;
-    btn.textContent = '復元する →';
+    btn.textContent = t('restore_btn');
     resultEl.innerHTML = '';
   }, 4000);
 }
@@ -581,17 +635,17 @@ function renderCapturePanel() {
     panel.innerHTML = `
       <div class="panel-header">
         <span style="font-size:16px">◎</span>
-        <h2 class="panel-title">保存・確認</h2>
+        <h2 class="panel-title">${t('cap_title')}</h2>
       </div>
       <div class="panel-body">
         <div class="capture-wrap">
           <div class="summary-box" style="text-align:center;padding:32px 20px;">
             <div class="summary-loading" style="justify-content:center">
               <span class="spinner"></span>
-              <span>コンテキストを収集中…</span>
+              <span>${t('cap_collecting')}</span>
             </div>
             <p style="font-size:11.5px;color:var(--text-3);margin-top:12px;">
-              ウィンドウ・タブ・ファイル・履歴を収集しています
+              ${t('cap_collecting_desc')}
             </p>
           </div>
         </div>
@@ -604,18 +658,17 @@ function renderCapturePanel() {
     panel.innerHTML = `
       <div class="empty-state" style="height:100%">
         <div class="empty-icon">◎</div>
-        <p class="empty-title">保存待ちのセッションはありません</p>
+        <p class="empty-title">${t('cap_idle_title')}</p>
         <p class="empty-hint">
-          <kbd>${esc(config.captureShortcut || 'Ctrl+Shift+S')}</kbd> を押すとAIが作業内容を推測して<br>保存確認を表示します
+          ${t('cap_idle_hint', { key: '<kbd>' + esc(config.captureShortcut || 'Ctrl+Shift+S') + '</kbd>' })}
         </p>
       </div>`;
     return;
   }
 
   const now = new Date();
-  const wdays = ['日','月','火','水','木','金','土'];
-  const nowStr = (now.getMonth()+1) + '月' + now.getDate() + '日（' + wdays[now.getDay()] + '）'
-    + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  const { date: nowDate, time: nowTime } = formatDate(now.toISOString());
+  const nowStr = nowDate + ' ' + nowTime;
 
   // Build context sections
   let winHtml = '';
@@ -623,9 +676,9 @@ function renderCapturePanel() {
     const items = pendingSession.windows.slice(0, 6);
     const more  = pendingSession.windows.length - items.length;
     winHtml =
-      '<div><div class="ctx-col-title">ウィンドウ</div><ul class="ctx-list">' +
+      '<div><div class="ctx-col-title">' + t('cap_ctx_windows') + '</div><ul class="ctx-list">' +
       items.map(w => '<li>' + esc(w.title) + '</li>').join('') +
-      (more > 0 ? '<li style="color:var(--text-3);font-size:11px">…他 ' + more + '</li>' : '') +
+      (more > 0 ? '<li style="color:var(--text-3);font-size:11px">' + t('cap_ctx_more', { n: more }) + '</li>' : '') +
       '</ul></div>';
   }
 
@@ -633,7 +686,7 @@ function renderCapturePanel() {
   if (pendingSession.recentFiles && pendingSession.recentFiles.length > 0) {
     const items = pendingSession.recentFiles.slice(0, 5);
     filesHtml =
-      '<div><div class="ctx-col-title">最近のファイル</div><ul class="ctx-list">' +
+      '<div><div class="ctx-col-title">' + t('cap_ctx_files') + '</div><ul class="ctx-list">' +
       items.map(f => {
         const name = (f.split(/[/\\]/).pop() || f).replace(/\.lnk$/i, '');
         return '<li><a class="file-link" href="#" data-path="' + esc(f) + '" title="' + esc(f) + '">' + esc(name) + '</a></li>';
@@ -657,9 +710,9 @@ function renderCapturePanel() {
       const sub   = hasTitle ? ' <span style="color:var(--text-3);font-size:10px">(' + esc(domain) + ')</span>' : '';
       return '<li>' + label + sub + '</li>';
     }).join('');
-    if (more > 0) li += '<li style="color:var(--text-3);font-size:11px">…他 ' + more + ' タブ</li>';
+    if (more > 0) li += '<li style="color:var(--text-3);font-size:11px">' + t('cap_ctx_more', { n: more }) + '</li>';
     urlsCapHtml =
-      '<div><div class="ctx-col-title">ブラウザタブ</div><ul class="ctx-list">' + li + '</ul></div>';
+      '<div><div class="ctx-col-title">' + t('cap_ctx_tabs') + '</div><ul class="ctx-list">' + li + '</ul></div>';
   }
 
   // Capture panel: browser history — grouped
@@ -670,7 +723,7 @@ function renderCapturePanel() {
     const capGroupsHtml = buildHistoryGroupsHtml(capGroups, 'cap', 5);
     histCapHtml =
       '<div class="cap-history">' +
-        '<div class="ctx-col-title">🕐 閲覧履歴（' + capHistory.length + ' ページ）</div>' +
+        '<div class="ctx-col-title">' + t('cap_ctx_history', { n: capHistory.length }) + '</div>' +
         capGroupsHtml +
       '</div>';
   }
@@ -680,7 +733,7 @@ function renderCapturePanel() {
     const c      = pendingSession.clipboard.trim().substring(0, 200);
     const suffix = pendingSession.clipboard.trim().length > 200 ? '…' : '';
     clipHtml =
-      '<div class="ctx-clip"><div class="ctx-col-title">クリップボード</div>' +
+      '<div class="ctx-clip"><div class="ctx-col-title">' + t('cap_ctx_clipboard') + '</div>' +
       '<pre>' + esc(c) + suffix + '</pre></div>';
   }
 
@@ -696,34 +749,34 @@ function renderCapturePanel() {
 
   const isLoading = !pendingSession.aiSummary;
   const summaryBodyHtml = isLoading
-    ? `<div class="summary-loading" id="summary-display"><span class="spinner"></span><span>AI が作業内容を推測中…</span></div>`
+    ? `<div class="summary-loading" id="summary-display"><span class="spinner"></span><span>${t('cap_ai_loading')}</span></div>`
     : `<div class="summary-text" id="summary-display">${formatSummary(pendingSession.aiSummary)}</div>`;
 
   panel.innerHTML = `
     <div class="panel-header">
       <span style="font-size:16px">◎</span>
-      <h2 class="panel-title">保存・確認</h2>
+      <h2 class="panel-title">${t('cap_title')}</h2>
       <span style="margin-left:auto;font-size:12px;color:var(--text-3)">${nowStr}</span>
     </div>
     <div class="panel-body">
       <div class="capture-wrap">
 
         <div class="summary-box">
-          <div class="summary-section-label">AI による作業内容の推測</div>
+          <div class="summary-section-label">${t('cap_ai_label')}</div>
           ${summaryBodyHtml}
         </div>
 
         ${ctxCardHtml}
 
         <div>
-          <label class="note-label" for="capture-note">メモを追加（任意）</label>
+          <label class="note-label" for="capture-note">${t('cap_note_label')}</label>
           <textarea id="capture-note" class="note-input"
-            placeholder="今やっていたことを補足メモ…"></textarea>
+            placeholder="${t('cap_note_placeholder')}"></textarea>
         </div>
 
         <div class="capture-actions">
-          <button class="btn-secondary" id="btn-skip-capture">スキップ</button>
-          <button class="btn-primary" id="btn-approve-capture"${isLoading ? ' disabled' : ''}>✓ 保存する</button>
+          <button class="btn-secondary" id="btn-skip-capture">${t('cap_skip')}</button>
+          <button class="btn-primary" id="btn-approve-capture"${isLoading ? ' disabled' : ''}>${t('cap_save')}</button>
         </div>
 
       </div>
@@ -812,7 +865,7 @@ function initSettings() {
   document.getElementById('btn-save-shortcuts')?.addEventListener('click', async () => {
     const captureKey = (elCaptureShortcut.value || '').trim() || 'Ctrl+Shift+S';
     const openKey    = (elOpenShortcut.value    || '').trim() || 'Ctrl+Shift+R';
-    elShortcutStatus.textContent = '登録中…';
+    elShortcutStatus.textContent = t('settings_shortcut_registering');
     elShortcutStatus.className   = 'setting-status';
 
     // save-config now auto-registers shortcuts when shortcut keys change
@@ -821,13 +874,13 @@ function initSettings() {
 
     if (result.captureOk && result.openOk) {
       Object.assign(config, { captureShortcut: captureKey, openShortcut: openKey });
-      elShortcutStatus.textContent = '✅ 保存・登録しました';
+      elShortcutStatus.textContent = t('settings_shortcut_saved');
       elShortcutStatus.className   = 'setting-status';
     } else {
       const parts = [];
-      if (!result.captureOk) parts.push('保存ショートカット（他アプリが使用中かも）');
-      if (!result.openOk)    parts.push('開くショートカット（他アプリが使用中かも）');
-      elShortcutStatus.textContent = '⚠️ 登録失敗: ' + parts.join(' / ');
+      if (!result.captureOk) parts.push(t('settings_shortcut_fail_capture'));
+      if (!result.openOk)    parts.push(t('settings_shortcut_fail_open'));
+      elShortcutStatus.textContent = t('settings_shortcut_fail') + parts.join(' / ');
       elShortcutStatus.className   = 'setting-status error';
     }
   });
@@ -858,19 +911,19 @@ function initSettings() {
           const tabs = await tabsRes.json();
           if (tabs.length > 0) {
             extDot.style.background  = 'var(--success)';
-            extText.textContent = '✅ 拡張機能が接続されています（' + tabs.length + ' タブを認識中）';
+            extText.textContent = t('settings_ext_connected', { n: tabs.length });
           } else {
             extDot.style.background  = '#f59e0b';
-            extText.textContent = '⚠️ サーバーは起動中ですが拡張機能が未接続です';
+            extText.textContent = t('settings_ext_no_tabs');
           }
         } else {
           extDot.style.background  = '#f59e0b';
-          extText.textContent = '⚠️ サーバーは起動中ですがトークン取得に失敗しました';
+          extText.textContent = t('settings_ext_no_token');
         }
       }
     } catch {
       extDot.style.background = 'var(--error)';
-      extText.textContent = '❌ 拡張機能が接続されていません（拡張機能をインストールしてください）';
+      extText.textContent = t('settings_ext_disconnected');
     }
   }
 
@@ -888,13 +941,20 @@ function initSettings() {
   // Auto-check on settings tab open
   checkExtensionStatus();
 
-  // External links (open in default browser via IPC)
-  ['link-gemini','link-openai','link-anthropic','link-ollama'].forEach(id => {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('click', e => {
+  // External links (open in default browser via IPC) — use delegation
+  // since data-i18n-html may recreate these link elements
+  const LINK_URLS = {
+    'link-gemini': 'https://aistudio.google.com/apikey',
+    'link-openai': 'https://platform.openai.com/api-keys',
+    'link-anthropic': 'https://console.anthropic.com/',
+    'link-ollama': 'https://ollama.com',
+  };
+  document.querySelector('.settings-wrap')?.addEventListener('click', e => {
+    const a = e.target.closest('a[id^="link-"]');
+    if (a && LINK_URLS[a.id]) {
       e.preventDefault();
-      window.electronAPI.openUrl(el.href);
-    });
+      window.electronAPI.openUrl(LINK_URLS[a.id]);
+    }
   });
 
   // ── AI Provider Picker ───────────────────────────────────────────────────
@@ -937,10 +997,10 @@ function initSettings() {
   document.getElementById('btn-save-ai-gemini').addEventListener('click', async () => {
     const key   = elGeminiKey.value.trim();
     const model = elGeminiModel.value;
-    elGeminiStatus.textContent = '接続テスト中…';
+    elGeminiStatus.textContent = t('settings_testing');
     elGeminiStatus.className   = 'setting-status';
     if (!key.startsWith('AIza')) {
-      elGeminiStatus.textContent = '❌ "AIza" で始まるキーを入力してください';
+      elGeminiStatus.textContent = t('settings_err_key_aiza');
       elGeminiStatus.className   = 'setting-status error';
       return;
     }
@@ -948,10 +1008,10 @@ function initSettings() {
     if (result.ok) {
       await window.electronAPI.saveConfig({ googleApiKey: key, aiModel: model, geminiModel: model, aiProvider: 'gemini' });
       Object.assign(config, { googleApiKey: key, aiModel: model, geminiModel: model, aiProvider: 'gemini' });
-      elGeminiStatus.textContent = '✅ 保存しました（' + model + '）';
+      elGeminiStatus.textContent = t('settings_saved', { model });
       elGeminiStatus.className   = 'setting-status';
     } else {
-      elGeminiStatus.textContent = '❌ ' + (result.error || '接続に失敗しました');
+      elGeminiStatus.textContent = '❌ ' + (result.error || t('settings_err_connect'));
       elGeminiStatus.className   = 'setting-status error';
     }
   });
@@ -973,10 +1033,10 @@ function initSettings() {
   document.getElementById('btn-save-ai-openai').addEventListener('click', async () => {
     const key   = elOpenAIKey.value.trim();
     const model = elOpenAIModel.value;
-    elOpenAIStatus.textContent = '接続テスト中…';
+    elOpenAIStatus.textContent = t('settings_testing');
     elOpenAIStatus.className   = 'setting-status';
     if (!key.startsWith('sk-')) {
-      elOpenAIStatus.textContent = '❌ "sk-" で始まるキーを入力してください';
+      elOpenAIStatus.textContent = t('settings_err_key_sk');
       elOpenAIStatus.className   = 'setting-status error';
       return;
     }
@@ -986,10 +1046,10 @@ function initSettings() {
       Object.assign(config, { openaiApiKey: key, aiModel: model, aiProvider: 'openai' });
       currentProvider = 'openai';
       showProvider('openai');
-      elOpenAIStatus.textContent = '✅ 保存しました（' + model + '）';
+      elOpenAIStatus.textContent = t('settings_saved', { model });
       elOpenAIStatus.className   = 'setting-status';
     } else {
-      elOpenAIStatus.textContent = '❌ ' + (result.error || '接続に失敗しました');
+      elOpenAIStatus.textContent = '❌ ' + (result.error || t('settings_err_connect'));
       elOpenAIStatus.className   = 'setting-status error';
     }
   });
@@ -1011,10 +1071,10 @@ function initSettings() {
   document.getElementById('btn-save-ai-anthropic').addEventListener('click', async () => {
     const key   = elAnthKey.value.trim();
     const model = elAnthModel.value;
-    elAnthStatus.textContent = '接続テスト中…';
+    elAnthStatus.textContent = t('settings_testing');
     elAnthStatus.className   = 'setting-status';
     if (!key.startsWith('sk-ant-')) {
-      elAnthStatus.textContent = '❌ "sk-ant-" で始まるキーを入力してください';
+      elAnthStatus.textContent = t('settings_err_key_skant');
       elAnthStatus.className   = 'setting-status error';
       return;
     }
@@ -1024,10 +1084,10 @@ function initSettings() {
       Object.assign(config, { anthropicApiKey: key, aiModel: model, aiProvider: 'anthropic' });
       currentProvider = 'anthropic';
       showProvider('anthropic');
-      elAnthStatus.textContent = '✅ 保存しました（' + model + '）';
+      elAnthStatus.textContent = t('settings_saved', { model });
       elAnthStatus.className   = 'setting-status';
     } else {
-      elAnthStatus.textContent = '❌ ' + (result.error || '接続に失敗しました');
+      elAnthStatus.textContent = '❌ ' + (result.error || t('settings_err_connect'));
       elAnthStatus.className   = 'setting-status error';
     }
   });
@@ -1043,7 +1103,7 @@ function initSettings() {
   document.getElementById('btn-save-ai-ollama').addEventListener('click', async () => {
     const url   = elOllamaUrl.value.trim() || 'http://localhost:11434';
     const model = elOllamaModel.value.trim() || 'llama3.2';
-    elOllamaStatus.textContent = '接続テスト中…';
+    elOllamaStatus.textContent = t('settings_testing');
     elOllamaStatus.className   = 'setting-status';
     const result = await window.electronAPI.testAiConfig({ provider: 'ollama', ollamaBaseUrl: url, model });
     if (result.ok) {
@@ -1051,11 +1111,11 @@ function initSettings() {
       Object.assign(config, { ollamaBaseUrl: url, aiModel: model, aiProvider: 'ollama' });
       currentProvider = 'ollama';
       showProvider('ollama');
-      const modelInfo = result.model ? '（利用可能: ' + result.model.substring(0, 40) + '）' : '';
-      elOllamaStatus.textContent = '✅ 接続成功・保存しました ' + modelInfo;
+      const modelInfo = result.model ? t('settings_available', { models: result.model.substring(0, 40) }) : '';
+      elOllamaStatus.textContent = t('settings_saved_ollama') + ' ' + modelInfo;
       elOllamaStatus.className   = 'setting-status';
     } else {
-      elOllamaStatus.textContent = '❌ ' + (result.error || '接続に失敗しました');
+      elOllamaStatus.textContent = '❌ ' + (result.error || t('settings_err_connect'));
       elOllamaStatus.className   = 'setting-status error';
     }
   });
@@ -1105,20 +1165,23 @@ window.electronAPI.onSessionSummaryReady((aiSummary) => {
 
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
-  const [loadedSessions, loadedConfig, loadedPending, captureState, loadedInitialTab] = await Promise.all([
+  const [loadedSessions, loadedConfig, loadedPending, captureState, loadedInitialTab, loadedI18n] = await Promise.all([
     window.electronAPI.loadSessions(),
     window.electronAPI.getConfig(),
     window.electronAPI.getPendingSession(),
     window.electronAPI.getCaptureState(),
     window.electronAPI.getInitialTab(),
+    window.electronAPI.getTranslations(),
   ]);
   sessions = loadedSessions;
   config = loadedConfig;
+  i18n = loadedI18n || {};
   pendingSession = loadedPending;
   isCollecting = (captureState === 'collecting');
   const initialTab = loadedInitialTab;
 
   applyTheme(config.theme || 'system');
+  applyTranslations(); // translate static HTML elements
 
   renderSessions();
   renderCapturePanel();
@@ -1127,12 +1190,28 @@ async function init() {
   // Theme buttons
   document.querySelectorAll('.theme-btn').forEach(btn => {
     btn.addEventListener('click', async () => {
-      const t = btn.dataset.theme;
-      applyTheme(t);
-      config.theme = t;
-      await window.electronAPI.saveConfig({ theme: t });
+      const thm = btn.dataset.theme;
+      applyTheme(thm);
+      config.theme = thm;
+      await window.electronAPI.saveConfig({ theme: thm });
     });
   });
+
+  // Language picker
+  const langSelect = document.getElementById('setting-language');
+  if (langSelect) {
+    langSelect.value = config.language || 'ja';
+    langSelect.addEventListener('change', async (e) => {
+      const lang = e.target.value;
+      await window.electronAPI.saveConfig({ language: lang });
+      config.language = lang;
+      // Reload translations and re-render everything
+      i18n = await window.electronAPI.getTranslations();
+      applyTranslations();
+      renderSessions();
+      renderCapturePanel();
+    });
+  }
 
   // Nav items
   document.querySelectorAll('.nav-item').forEach(item => {
@@ -1160,7 +1239,7 @@ async function init() {
     const detail = document.getElementById('detail-' + id);
     if (!detail) return;
     const expanded = detail.classList.toggle('expanded');
-    btn.textContent = expanded ? '▾ 詳細を閉じる' : '▸ 詳細を見る';
+    btn.textContent = expanded ? t('detail_collapse') : t('detail_expand');
   });
 
   // Layout B — list row expand/collapse (skip if clicking restore button)
@@ -1182,7 +1261,7 @@ async function init() {
     const detail = document.getElementById('tl-detail-' + id);
     if (!detail) return;
     const expanded = detail.classList.toggle('expanded');
-    btn.textContent = expanded ? '▾ 詳細を閉じる' : '▸ 詳細を見る';
+    btn.textContent = expanded ? t('detail_collapse') : t('detail_expand');
   });
 
   // History group collapse — event delegation (works for dynamically rendered cards)

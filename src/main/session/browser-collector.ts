@@ -1,27 +1,33 @@
 /**
  * browser-collector.ts
  *
- * Collects currently open browser tabs (URL + page title) using two strategies:
+ * Collects currently open browser tabs (URL + page title) using three strategies:
  *
  *  1. Chrome DevTools Protocol (CDP) — gets ALL open tabs with titles.
  *     Works when Chrome/Edge is started with --remote-debugging-port=9222.
+ *     Cross-platform.
  *
- *  2. Pure-PowerShell UI Automation (2-phase warm-up):
+ *  2. Pure-PowerShell UI Automation (Windows only, 2-phase warm-up):
  *       Phase 1 — Touch each browser window to wake its lazy UIA provider
  *       Wait   — 1000 ms for providers to become ready
  *       Phase 2 — Find OmniboxViewViews (Chrome/Edge), urlbar-input (Firefox),
  *                  capture URL + window title as tab title.
  *
+ *  3. AppleScript (macOS only):
+ *       Queries Chrome, Edge, Brave, and Safari for all open tab URLs/titles
+ *       via `osascript`.
+ *
  *  Key notes:
  *  - Chrome's OmniboxViewViews shows the URL WITHOUT "https://" prefix → we normalize.
  *  - The window title (root.Current.Name) equals the active tab's page title.
- *  - CDP preferred when available; UIA is the universal fallback.
+ *  - CDP preferred when available; UIA (Windows) / AppleScript (macOS) is the fallback.
  */
 
 import { execFile } from 'child_process';
 import { promisify } from 'util';
 import * as http from 'http';
 import { getRelayTabs } from './tab-relay-server';
+import { isMac } from '../platform';
 
 const execFileAsync = promisify(execFile);
 
@@ -233,6 +239,90 @@ async function getTabsViaUIA(): Promise<BrowserTab[]> {
   }
 }
 
+// ── 3. AppleScript fallback (macOS) ──────────────────────────────────────────
+
+async function getTabsViaAppleScript(): Promise<BrowserTab[]> {
+  const browsers = [
+    { app: 'Google Chrome', proc: 'chrome' },
+    { app: 'Microsoft Edge', proc: 'msedge' },
+    { app: 'Brave Browser', proc: 'brave' },
+  ];
+
+  const tabs: BrowserTab[] = [];
+
+  for (const b of browsers) {
+    try {
+      const script = `
+        if application "${b.app}" is running then
+          tell application "${b.app}"
+            set tabList to ""
+            repeat with w in windows
+              repeat with t in tabs of w
+                set tabList to tabList & URL of t & "\\t" & title of t & "\\n"
+              end repeat
+            end repeat
+            return tabList
+          end tell
+        end if
+      `;
+      const { stdout } = await execFileAsync(
+        '/usr/bin/osascript', ['-e', script],
+        { timeout: 5000, encoding: 'utf8' }
+      );
+      const trimmed = stdout.trim();
+      if (!trimmed) continue;
+      for (const line of trimmed.split('\n')) {
+        if (!line) continue;
+        const [url, ...rest] = line.split('\t');
+        if (url && /^https?:\/\//.test(url)) {
+          tabs.push({
+            url,
+            title: rest.join('\t') || url,
+            browser: b.proc,
+          });
+        }
+      }
+    } catch { /* browser not installed or not running */ }
+  }
+
+  // Also try Safari
+  try {
+    const safariScript = `
+      if application "Safari" is running then
+        tell application "Safari"
+          set tabList to ""
+          repeat with w in windows
+            repeat with t in tabs of w
+              set tabList to tabList & URL of t & "\\t" & name of t & "\\n"
+            end repeat
+          end repeat
+          return tabList
+        end tell
+      end if
+    `;
+    const { stdout } = await execFileAsync(
+      '/usr/bin/osascript', ['-e', safariScript],
+      { timeout: 5000, encoding: 'utf8' }
+    );
+    const trimmed = stdout.trim();
+    if (trimmed) {
+      for (const line of trimmed.split('\n')) {
+        if (!line) continue;
+        const [url, ...rest] = line.split('\t');
+        if (url && /^https?:\/\//.test(url)) {
+          tabs.push({
+            url,
+            title: rest.join('\t') || url,
+            browser: 'safari',
+          });
+        }
+      }
+    }
+  } catch { /* Safari not running */ }
+
+  return tabs;
+}
+
 // ── Public API ────────────────────────────────────────────────────────────────
 
 export async function collectBrowserTabs(): Promise<BrowserTab[]> {
@@ -250,13 +340,13 @@ export async function collectBrowserTabs(): Promise<BrowserTab[]> {
 
   // Priority 2: CDP — all tabs, requires --remote-debugging-port flag
   // Priority 3: UIA — active tab only, always available
-  const [cdpTabs, uiaTabs] = await Promise.all([
+  const [cdpTabs, fallbackTabs] = await Promise.all([
     getTabsViaCDP(),
-    getTabsViaUIA(),
+    isMac ? getTabsViaAppleScript() : getTabsViaUIA(),
   ]);
 
   // CDP wins over UIA (has all tabs); UIA is the last fallback (one tab per window)
-  const merged = cdpTabs.length > 0 ? cdpTabs : uiaTabs;
+  const merged = cdpTabs.length > 0 ? cdpTabs : fallbackTabs;
 
   // De-duplicate by URL
   const seen = new Set<string>();
@@ -268,7 +358,7 @@ export async function collectBrowserTabs(): Promise<BrowserTab[]> {
 
   console.log(
     `[TK] Browser tabs captured: ${unique.length}` +
-    ` (CDP: ${cdpTabs.length}, UIA: ${uiaTabs.length})`
+    ` (CDP: ${cdpTabs.length}, ${isMac ? 'AppleScript' : 'UIA'}: ${fallbackTabs.length})`
   );
   return unique.slice(0, 30);
 }
