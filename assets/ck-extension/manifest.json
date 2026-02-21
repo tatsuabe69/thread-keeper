@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "ThreadKeeper Tab Bridge",
+  "version": "1.0.0",
+  "description": "Sends browser tab information to ThreadKeeper desktop app for context capture.",
+  "permissions": ["tabs"],
+  "host_permissions": ["http://localhost/*"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "ThreadKeeper Tab Bridge",
+    "default_popup": "popup.html"
+  }
+}

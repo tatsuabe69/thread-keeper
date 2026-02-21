@@ -1,0 +1,54 @@
+{
+  "name": "thread-keeper",
+  "version": "0.1.0",
+  "description": "作業文脈を保存・復元するデスクトップアプリ",
+  "main": "dist/main/main.js",
+  "scripts": {
+    "dev": "concurrently -k -p \"[{name}]\" -n \"TSC,ELECTRON\" -c \"cyan,green\" \"npm run build:watch\" \"npm run start:electron\"",
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch",
+    "start:electron": "wait-on dist/main/main.js && electron .",
+    "start": "electron .",
+    "dist": "npm run build && electron-builder --win"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^16.4.5",
+    "sql.js": "^1.14.0",
+    "uuid": "^10.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/uuid": "^10.0.0",
+    "concurrently": "^9.1.2",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.3",
+    "wait-on": "^8.0.1"
+  },
+  "build": {
+    "appId": "com.threadkeeper.app",
+    "productName": "ThreadKeeper",
+    "copyright": "Copyright © 2025",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "src/renderer/**/*",
+      "assets/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

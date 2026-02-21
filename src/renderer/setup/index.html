@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>ThreadKeeper セットアップ</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
+      background: #0d0d16;
+      color: #f2f2ff;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      width: 100%; max-width: 420px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+
+    /* Logo row */
+    .logo-row {
+      display: flex; align-items: center; gap: 14px;
+    }
+    .logo-badge {
+      width: 50px; height: 50px;
+      background: linear-gradient(135deg, #3a58ee, #607aff);
+      border-radius: 14px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      box-shadow: 0 4px 18px rgba(60, 90, 240, 0.45);
+      flex-shrink: 0;
+    }
+    .logo-text h1 { font-size: 20px; font-weight: 700; color: #f2f2ff; }
+    .logo-text p { font-size: 12px; color: #525a80; margin-top: 3px; }
+
+    .divider { height: 1px; background: #1a1a2c; }
+
+    /* Field */
+    .field-label {
+      display: block; font-size: 12px; font-weight: 600;
+      color: #5868a0; margin-bottom: 8px; letter-spacing: 0.02em;
+    }
+
+    /* Input */
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      background: #10102a; border: 1px solid #202048;
+      border-radius: 8px; color: #e8e8ff;
+      padding: 12px 14px; font-size: 13px;
+      font-family: 'Consolas', monospace; letter-spacing: 0.03em;
+      transition: border-color 0.15s;
+    }
+    input:focus { outline: none; border-color: #607aff; background: #141438; }
+    input::placeholder { color: #202048; }
+
+    /* Select */
+    select {
+      width: 100%;
+      background: #10102a; border: 1px solid #202048;
+      border-radius: 8px; color: #dde0ff;
+      padding: 11px 14px; font-size: 13px; font-family: inherit;
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23607aff' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      padding-right: 36px;
+      transition: border-color 0.15s;
+    }
+    select:focus { outline: none; border-color: #607aff; }
+    select option { background: #1a1a38; }
+
+    .hint-text {
+      font-size: 11.5px; color: #3c4468;
+      line-height: 1.65; margin-top: 7px;
+    }
+    .hint-text a { color: #6080ff; text-decoration: none; }
+    .hint-text a:hover { text-decoration: underline; }
+
+    /* Status */
+    .status {
+      font-size: 12.5px; padding: 10px 14px;
+      border-radius: 8px; display: none; line-height: 1.5;
+    }
+    .status.error  { background: #1e0c0c; color: #ff7272; border: 1px solid #381414; display: block; }
+    .status.success{ background: #0c1e14; color: #38e888; border: 1px solid #143824; display: block; }
+    .status.loading{ background: #10102a; color: #6878c0; border: 1px solid #1c1c48; display: block; }
+
+    /* Primary button */
+    .btn-primary {
+      width: 100%; padding: 13px;
+      background: #607aff; color: #fff; border: none;
+      border-radius: 9px; font-size: 14px; font-weight: 600;
+      font-family: inherit; cursor: pointer; transition: all 0.15s;
+      box-shadow: 0 2px 14px rgba(96, 122, 255, 0.4);
+    }
+    .btn-primary:hover:not(:disabled) {
+      background: #506aea;
+      box-shadow: 0 4px 20px rgba(96, 122, 255, 0.55);
+    }
+    .btn-primary:active:not(:disabled) { transform: scale(0.99); }
+    .btn-primary:disabled { opacity: 0.38; cursor: default; }
+
+    .skip-link {
+      text-align: center; font-size: 12px;
+      color: #2e2e54; cursor: pointer; transition: color 0.15s;
+    }
+    .skip-link:hover { color: #5868a0; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="logo-row">
+      <div class="logo-badge">🧠</div>
+      <div class="logo-text">
+        <h1>ThreadKeeper</h1>
+        <p>作業文脈を保存・復元するデスクトップアプリ</p>
+      </div>
+    </div>
+
+    <div class="divider"></div>
+
+    <!-- API Key -->
+    <div>
+      <span class="field-label">🔑 Google AI Studio API キー</span>
+      <input
+        type="password"
+        id="api-key"
+        placeholder="AIzaSy..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <p class="hint-text">
+        キー取得:
+        <a href="#" id="link-aistudio">aistudio.google.com/apikey</a>
+        を開いて「Create API key」をクリック
+      </p>
+    </div>
+
+    <!-- Browser selection -->
+    <div>
+      <span class="field-label">🌐 使用するブラウザ</span>
+      <select id="browser-select">
+        <option value="edge">Microsoft Edge</option>
+        <option value="chrome">Google Chrome</option>
+        <option value="firefox">Mozilla Firefox</option>
+        <option value="brave">Brave Browser</option>
+      </select>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <button class="btn-primary" id="btn-save">接続テスト &amp; 保存</button>
+    <div class="skip-link" id="btn-skip">スキップ（後で設定する）</div>
+  </div>
+
+  <script src="setup.js"></script>
+</body>
+</html>

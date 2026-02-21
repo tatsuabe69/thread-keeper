@@ -1,0 +1,1097 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="system">
+<head>
+  <meta charset="UTF-8" />
+  <title>ThreadKeeper</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+  <style>
+    /* ════════════════════════════════════════
+       DESIGN TOKENS
+    ════════════════════════════════════════ */
+    :root, [data-theme="light"] {
+      --bg:             #F7F7FA;
+      --surface:        #FFFFFF;
+      --surface-2:      #F7F7FA;
+      --surface-3:      #EFEFF4;
+      --border:         rgba(17,17,24,0.11);
+      --border-subtle:  rgba(17,17,24,0.07);
+      --accent:         #1A56E8;
+      --accent-hover:   #1244C8;
+      --accent-dim:     rgba(26,86,232,0.07);
+      --accent-text:    #ffffff;
+      --nav-active-bg:  rgba(26,86,232,0.07);
+      --nav-active-fg:  #1A56E8;
+      --nav-hover-bg:   rgba(17,17,24,0.04);
+      --nav-fg:         rgba(17,17,24,0.4);
+      --sidebar-bg:     #FAFAFA;
+      --sidebar-border: rgba(17,17,24,0.08);
+      --text-1:         #111118;
+      --text-2:         rgba(17,17,24,0.72);
+      --text-3:         rgba(17,17,24,0.50);
+      --success:        #0D9488;
+      --success-bg:     rgba(13,148,136,0.06);
+      --success-border: rgba(13,148,136,0.2);
+      --error:          #DC2626;
+      --error-bg:       rgba(220,38,38,0.05);
+      --tag-bg:         rgba(17,17,24,0.06);
+      --tag-fg:         rgba(17,17,24,0.52);
+      --card-border:    rgba(17,17,24,0.09);
+      --card-shadow:    0 1px 4px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.03);
+      --card-shadow-h:  0 4px 16px rgba(0,0,0,0.08), 0 20px 44px rgba(0,0,0,0.05);
+      --input-bg:       #F7F7FA;
+      --divider:        rgba(17,17,24,0.08);
+      --kbd-bg:         rgba(17,17,24,0.05);
+      --kbd-fg:         rgba(17,17,24,0.52);
+      --kbd-border:     rgba(17,17,24,0.12);
+      --toggle-off:     rgba(17,17,24,0.16);
+      --toggle-thumb:   rgba(17,17,24,0.4);
+      --code-bg:        #F3F3F6;
+      --restore-bg:     rgba(13,148,136,0.06);
+      --restore-border: rgba(13,148,136,0.22);
+      --restore-fg:     #0D9488;
+      --serif:          'Noto Serif JP', 'Yu Mincho', serif;
+      --sans:           'Noto Sans JP', 'Yu Gothic UI', 'Segoe UI', sans-serif;
+      color-scheme: light;
+    }
+
+    [data-theme="dark"] {
+      --bg:             #0D0D11;
+      --surface:        #13131A;
+      --surface-2:      #18181F;
+      --surface-3:      #1E1E27;
+      --border:         rgba(255,255,255,0.09);
+      --border-subtle:  rgba(255,255,255,0.05);
+      --accent:         #5080F0;
+      --accent-hover:   #6490F8;
+      --accent-dim:     rgba(80,128,240,0.12);
+      --accent-text:    #ffffff;
+      --nav-active-bg:  rgba(80,128,240,0.1);
+      --nav-active-fg:  #7BA4F2;
+      --nav-hover-bg:   rgba(255,255,255,0.04);
+      --nav-fg:         rgba(255,255,255,0.35);
+      --sidebar-bg:     #0F0F15;
+      --sidebar-border: rgba(255,255,255,0.07);
+      --text-1:         rgba(255,255,255,0.92);
+      --text-2:         rgba(255,255,255,0.60);
+      --text-3:         rgba(255,255,255,0.35);
+      --success:        #2DD4BF;
+      --success-bg:     rgba(45,212,191,0.07);
+      --success-border: rgba(45,212,191,0.18);
+      --error:          #F87171;
+      --error-bg:       rgba(248,113,113,0.07);
+      --tag-bg:         rgba(255,255,255,0.08);
+      --tag-fg:         rgba(255,255,255,0.50);
+      --card-border:    rgba(255,255,255,0.07);
+      --card-shadow:    0 1px 3px rgba(0,0,0,0.3);
+      --card-shadow-h:  0 4px 20px rgba(0,0,0,0.5);
+      --input-bg:       #0F0F15;
+      --divider:        rgba(255,255,255,0.07);
+      --kbd-bg:         rgba(255,255,255,0.07);
+      --kbd-fg:         rgba(255,255,255,0.40);
+      --kbd-border:     rgba(255,255,255,0.1);
+      --toggle-off:     rgba(255,255,255,0.15);
+      --toggle-thumb:   rgba(255,255,255,0.38);
+      --code-bg:        rgba(255,255,255,0.05);
+      --restore-bg:     rgba(45,212,191,0.07);
+      --restore-border: rgba(45,212,191,0.18);
+      --restore-fg:     #2DD4BF;
+      --serif:          'Noto Serif JP', 'Yu Mincho', serif;
+      --sans:           'Noto Sans JP', 'Yu Gothic UI', 'Segoe UI', sans-serif;
+      color-scheme: dark;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      [data-theme="system"] {
+        --bg:             #0D0D11;
+        --surface:        #13131A;
+        --surface-2:      #18181F;
+        --surface-3:      #1E1E27;
+        --border:         rgba(255,255,255,0.09);
+        --border-subtle:  rgba(255,255,255,0.05);
+        --accent:         #5080F0;
+        --accent-hover:   #6490F8;
+        --accent-dim:     rgba(80,128,240,0.12);
+        --accent-text:    #ffffff;
+        --nav-active-bg:  rgba(80,128,240,0.1);
+        --nav-active-fg:  #7BA4F2;
+        --nav-hover-bg:   rgba(255,255,255,0.04);
+        --nav-fg:         rgba(255,255,255,0.35);
+        --sidebar-bg:     #0F0F15;
+        --sidebar-border: rgba(255,255,255,0.07);
+        --text-1:         rgba(255,255,255,0.92);
+        --text-2:         rgba(255,255,255,0.60);
+        --text-3:         rgba(255,255,255,0.35);
+        --success:        #2DD4BF;
+        --success-bg:     rgba(45,212,191,0.07);
+        --success-border: rgba(45,212,191,0.18);
+        --error:          #F87171;
+        --error-bg:       rgba(248,113,113,0.07);
+        --tag-bg:         rgba(255,255,255,0.08);
+        --tag-fg:         rgba(255,255,255,0.50);
+        --card-border:    rgba(255,255,255,0.07);
+        --card-shadow:    0 1px 3px rgba(0,0,0,0.3);
+        --card-shadow-h:  0 4px 20px rgba(0,0,0,0.5);
+        --input-bg:       #0F0F15;
+        --divider:        rgba(255,255,255,0.07);
+        --kbd-bg:         rgba(255,255,255,0.07);
+        --kbd-fg:         rgba(255,255,255,0.40);
+        --kbd-border:     rgba(255,255,255,0.1);
+        --toggle-off:     rgba(255,255,255,0.15);
+        --toggle-thumb:   rgba(255,255,255,0.38);
+        --code-bg:        rgba(255,255,255,0.05);
+        --restore-bg:     rgba(45,212,191,0.07);
+        --restore-border: rgba(45,212,191,0.18);
+        --restore-fg:     #2DD4BF;
+        --serif:          'Noto Serif JP', 'Yu Mincho', serif;
+        --sans:           'Noto Sans JP', 'Yu Gothic UI', 'Segoe UI', sans-serif;
+        color-scheme: dark;
+      }
+    }
+
+    /* ════════════════════════════════════════
+       BASE
+    ════════════════════════════════════════ */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 13.5px;
+      line-height: 1.65;
+      background: var(--bg);
+      color: var(--text-1);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ════════════════════════════════════════
+       SIDEBAR
+    ════════════════════════════════════════ */
+    .sidebar {
+      width: 186px;
+      flex-shrink: 0;
+      background: var(--sidebar-bg);
+      border-right: 1px solid var(--sidebar-border);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+
+    .sidebar-logo {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 20px 16px 16px;
+      border-bottom: 1px solid var(--sidebar-border);
+    }
+    .logo-mark {
+      width: 26px; height: 26px;
+      background: var(--text-1);
+      border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 12px; flex-shrink: 0;
+    }
+    .logo-text {
+      font-family: var(--serif);
+      font-size: 13px; font-weight: 400;
+      letter-spacing: 0.01em;
+      color: var(--text-1);
+    }
+    .logo-ver {
+      font-size: 9.5px; color: var(--text-3);
+      font-weight: 300; margin-top: 1px; letter-spacing: 0.05em;
+    }
+
+    .sidebar-nav {
+      flex: 1; padding: 12px 8px;
+      display: flex; flex-direction: column; gap: 1px;
+    }
+    .nav-item {
+      display: flex; align-items: center; gap: 9px;
+      padding: 8px 10px; border-radius: 8px;
+      cursor: pointer; border: none; background: transparent;
+      color: var(--nav-fg);
+      font-size: 12.5px; font-family: var(--sans); font-weight: 400;
+      text-align: left; width: 100%;
+      transition: background 0.15s, color 0.15s;
+      letter-spacing: 0.02em;
+    }
+    .nav-item:hover { background: var(--nav-hover-bg); color: var(--text-2); }
+    .nav-item.active { background: var(--nav-active-bg); color: var(--nav-active-fg); font-weight: 500; }
+    .nav-icon { font-size: 13px; width: 18px; text-align: center; flex-shrink: 0; }
+    .nav-badge {
+      margin-left: auto; width: 6px; height: 6px;
+      background: var(--accent); border-radius: 50%;
+      box-shadow: 0 0 5px color-mix(in srgb, var(--accent) 55%, transparent);
+    }
+
+    .sidebar-footer {
+      padding: 12px 8px 16px;
+      border-top: 1px solid var(--sidebar-border);
+      margin-top: 4px;
+    }
+    .footer-label {
+      font-size: 9.5px; font-weight: 400; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.1em; padding: 0 4px 6px;
+    }
+    .theme-picker { display: flex; gap: 3px; }
+    .theme-btn {
+      flex: 1; padding: 6px 3px; border-radius: 7px;
+      border: 1px solid var(--border); background: var(--surface-2);
+      cursor: pointer; font-size: 10px; font-family: var(--sans); font-weight: 400;
+      color: var(--text-2);
+      display: flex; flex-direction: column; align-items: center; gap: 2px;
+      transition: all 0.15s;
+    }
+    .theme-btn:hover { border-color: var(--text-3); color: var(--text-1); background: var(--surface-3); }
+    .theme-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+    .theme-icon { font-size: 12px; }
+
+    /* ════════════════════════════════════════
+       CONTENT
+    ════════════════════════════════════════ */
+    .content { flex: 1; min-width: 0; display: flex; flex-direction: column; overflow: hidden; }
+    .panel { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+    .panel.active { display: flex; }
+
+    .panel-header {
+      padding: 13px 20px 12px;
+      border-bottom: 1px solid var(--divider);
+      display: flex; align-items: center; gap: 10px;
+      flex-shrink: 0; background: var(--surface);
+    }
+    .panel-title {
+      font-family: var(--serif);
+      font-size: 14.5px; font-weight: 400; color: var(--text-1);
+      letter-spacing: -0.01em;
+    }
+    .panel-subtitle {
+      font-size: 11px; color: var(--text-3);
+      font-weight: 300; letter-spacing: 0.03em;
+    }
+    .panel-body {
+      flex: 1; overflow-y: auto;
+      padding: 16px 20px; background: var(--bg);
+    }
+
+    /* ════════════════════════════════════════
+       LAYOUT PICKER
+    ════════════════════════════════════════ */
+    .layout-picker {
+      margin-left: auto;
+      display: flex; align-items: center; gap: 2px;
+      background: var(--surface-3);
+      border: 1px solid var(--border-subtle);
+      border-radius: 8px; padding: 3px;
+    }
+    .layout-btn {
+      display: flex; align-items: center; justify-content: center;
+      width: 28px; height: 24px; border-radius: 6px;
+      border: none; background: transparent; cursor: pointer;
+      color: var(--text-3); transition: all 0.15s;
+    }
+    .layout-btn:hover { color: var(--text-2); background: var(--surface); }
+    .layout-btn.active { background: var(--surface); color: var(--text-1); box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+    .layout-btn svg { width: 14px; height: 14px; }
+
+    /* ════════════════════════════════════════
+       LAYOUT A — カード型 (click-expand)
+    ════════════════════════════════════════ */
+    .session-card {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 14px; margin-bottom: 20px;
+      box-shadow: var(--card-shadow);
+      transition: box-shadow 0.2s, border-color 0.2s;
+      overflow: hidden;
+    }
+    .session-card:hover { border-color: var(--border); box-shadow: var(--card-shadow-h); }
+
+    .card-top { padding: 15px 18px 12px; }
+    .card-header { display: flex; align-items: center; gap: 8px; margin-bottom: 9px; }
+    .card-time {
+      font-size: 12px; font-weight: 400;
+      color: var(--text-3); letter-spacing: 0.02em; line-height: 1;
+      flex-shrink: 0;
+    }
+    .card-date { font-size: 11px; color: var(--text-3); font-weight: 300; flex-shrink: 0; }
+    .card-tags { display: flex; gap: 4px; margin-left: 4px; flex-wrap: wrap; }
+    .tag {
+      font-size: 10px; background: var(--tag-bg); color: var(--tag-fg);
+      padding: 2px 8px; border-radius: 99px; white-space: nowrap;
+      font-weight: 400; border: 1px solid var(--border-subtle);
+    }
+    .btn-restore {
+      margin-left: auto;
+      display: inline-flex; align-items: center; gap: 4px;
+      padding: 5px 14px; border-radius: 99px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--text-2);
+      cursor: pointer; font-size: 11.5px; font-family: var(--sans);
+      font-weight: 400; white-space: nowrap;
+      transition: all 0.2s; flex-shrink: 0;
+    }
+    .btn-restore:hover:not(:disabled) {
+      background: var(--text-1); color: #fff; border-color: var(--text-1);
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    }
+    .btn-restore:active:not(:disabled) { transform: scale(0.97); }
+    .btn-restore:disabled { opacity: 0.35; cursor: default; }
+
+    .card-summary { font-size: 13px; color: var(--text-1); font-weight: 400; line-height: 1.75; overflow-wrap: break-word; word-break: break-word; }
+    .card-note {
+      font-size: 11.5px; color: var(--text-2); font-style: italic;
+      margin-top: 8px; padding-left: 10px;
+      border-left: 2px solid var(--border); font-weight: 300;
+    }
+    .card-foot { padding: 0 18px 11px; }
+    .card-expand-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: none; border: none; cursor: pointer;
+      font-size: 11px; color: var(--text-3); font-family: var(--sans);
+      font-weight: 300; padding: 2px 0; letter-spacing: 0.02em;
+      transition: color 0.15s;
+    }
+    .card-expand-btn:hover { color: var(--accent); text-decoration: underline; }
+
+    /* ─── Structured summary (new AI format) ─── */
+    .summary-struct {
+      list-style: none; padding: 0; margin: 0;
+      display: flex; flex-direction: column; gap: 6px;
+    }
+    .ss-row {
+      display: flex; gap: 10px; align-items: baseline;
+    }
+    .ss-label {
+      font-size: 9.5px; font-weight: 500; color: var(--text-3);
+      text-transform: uppercase; letter-spacing: 0.09em;
+      flex-shrink: 0; min-width: 56px; padding-top: 2px;
+    }
+    .ss-value {
+      font-size: 13px; color: var(--text-1); font-weight: 400;
+      line-height: 1.7; flex: 1; min-width: 0;
+      overflow-wrap: break-word; word-break: break-word;
+    }
+    .ss-plain { min-width: 0; }
+    .summary-plain {
+      font-size: 13px; color: var(--text-1); font-weight: 400; line-height: 1.75;
+      overflow-wrap: break-word; word-break: break-word;
+    }
+    /* tl-summary with structured content */
+    .tl-summary .summary-struct { padding: 0; }
+    /* lr-summary keeps line-clamp for compact display */
+    .lr-summary .summary-struct { display: block; }
+
+    /* ── 参照中 multi-line refs ── */
+    .ss-refs { display: flex; flex-direction: column; gap: 1px; }
+    .ss-ref-item {
+      font-size: 12.5px; color: var(--text-1); line-height: 1.7;
+      display: flex; align-items: baseline; gap: 6px;
+    }
+    .ss-ref-item::before { content: '·'; color: var(--text-3); font-size: 14px; flex-shrink: 0; }
+
+    .card-detail {
+      display: none;
+      padding: 12px 18px 14px;
+      border-top: 1px solid var(--divider);
+      background: var(--surface-2);
+    }
+    .card-detail.expanded { display: block; }
+
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 20px; }
+    .detail-grid.single { grid-template-columns: 1fr; }
+    .detail-section { min-width: 0; }
+    .detail-section-title {
+      font-size: 9.5px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 5px;
+    }
+    .detail-list { list-style: none; padding: 0; }
+    .detail-list li {
+      font-size: 12px; color: var(--text-2); font-weight: 400;
+      padding: 1.5px 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; align-items: baseline; gap: 5px;
+    }
+    .detail-list li::before { content: '·'; color: var(--text-3); flex-shrink: 0; font-size: 14px; }
+    .detail-more { color: var(--text-3); font-size: 10.5px; }
+    .detail-urls { margin-top: 10px; }
+    .url-list li { max-width: 100%; flex-direction: column; align-items: flex-start; }
+    .url-link {
+      color: var(--accent); text-decoration: none;
+      font-size: 12px; font-weight: 400;
+      display: flex; flex-direction: column; max-width: 100%; overflow: hidden;
+    }
+    .url-link:hover { text-decoration: none; }
+    .url-link:hover .tab-title { text-decoration: underline; }
+    .file-link {
+      color: var(--accent); text-decoration: none;
+      font-size: 12px; font-weight: 400;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: block; max-width: 100%;
+    }
+    .file-link:hover { text-decoration: underline; }
+    .tab-title {
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      font-size: 12px; color: var(--accent); font-weight: 400;
+    }
+    .tab-domain { font-size: 10px; color: var(--text-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .detail-clip { margin-top: 10px; }
+    .clip-pre {
+      font-family: 'Consolas', 'Cascadia Code', monospace;
+      font-size: 11px; line-height: 1.6; color: var(--text-2);
+      background: var(--code-bg); border: 1px solid var(--border-subtle);
+      border-radius: 8px; padding: 8px 10px;
+      overflow-y: auto; max-height: 72px;
+      white-space: pre-wrap; word-break: break-all;
+    }
+
+    .restore-result {
+      margin: 0 18px 12px; padding: 9px 14px;
+      background: var(--restore-bg); border: 1px solid var(--restore-border);
+      border-radius: 8px; font-size: 11.5px; color: var(--restore-fg);
+      font-weight: 400; line-height: 1.8;
+    }
+    .restore-result:empty { display: none; }
+
+    /* ════════════════════════════════════════
+       LAYOUT B — リスト型
+    ════════════════════════════════════════ */
+    .list-wrap {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--card-shadow);
+    }
+    .list-row {
+      display: flex; align-items: flex-start; gap: 14px;
+      padding: 11px 18px;
+      border-bottom: 1px solid var(--divider);
+      cursor: pointer; transition: background 0.1s;
+    }
+    .list-row:last-of-type { border-bottom: none; }
+    .list-row:hover { background: var(--surface-2); }
+    .lr-time {
+      font-size: 12px; font-weight: 400; color: var(--text-3);
+      min-width: 44px; line-height: 1; padding-top: 4px; flex-shrink: 0;
+      letter-spacing: 0.02em;
+    }
+    .lr-main { flex: 1; min-width: 0; }
+    .lr-meta { display: flex; align-items: center; gap: 6px; margin-bottom: 3px; flex-wrap: wrap; }
+    .lr-date { font-size: 10.5px; color: var(--text-3); font-weight: 300; flex-shrink: 0; }
+    .lr-summary {
+      font-size: 13px; color: var(--text-1); font-weight: 400;
+      line-height: 1.5;
+      display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+    .lr-restore-wrap { flex-shrink: 0; padding-top: 2px; }
+    .list-detail {
+      display: none;
+      padding: 11px 18px 13px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--divider);
+    }
+    .list-detail.expanded { display: block; }
+
+    /* ════════════════════════════════════════
+       LAYOUT C — タイムライン型
+    ════════════════════════════════════════ */
+    .tl-day-group { margin-bottom: 28px; }
+    .tl-day-label {
+      font-size: 10px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 0.13em; color: var(--text-3);
+      display: flex; align-items: center; gap: 12px;
+      margin-bottom: 14px;
+    }
+    .tl-day-label::after { content: ''; flex: 1; height: 1px; background: var(--divider); }
+
+    .tl-item { display: flex; gap: 0; padding-bottom: 18px; position: relative; }
+    .tl-item:last-child { padding-bottom: 0; }
+
+    .tl-left {
+      width: 32px; flex-shrink: 0;
+      display: flex; flex-direction: column; align-items: center;
+    }
+    .tl-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--accent); flex-shrink: 0; margin-top: 5px;
+      box-shadow: 0 0 0 3px var(--accent-dim);
+    }
+    .tl-line { width: 1px; flex: 1; background: var(--divider); margin-top: 6px; }
+    .tl-item:last-child .tl-line { display: none; }
+
+    .tl-body { flex: 1; min-width: 0; }
+    .tl-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; flex-wrap: wrap; }
+    .tl-time {
+      font-size: 12px; font-weight: 400; color: var(--text-3); line-height: 1;
+      letter-spacing: 0.02em;
+    }
+    .tl-summary {
+      font-size: 13px; color: var(--text-1); font-weight: 400;
+      line-height: 1.7; cursor: pointer;
+      padding: 8px 14px;
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 10px;
+      box-shadow: var(--card-shadow);
+      transition: border-color 0.15s;
+      margin-bottom: 6px;
+    }
+    .tl-summary:hover { border-color: var(--border); }
+    .tl-note {
+      font-size: 11.5px; color: var(--text-3); font-style: italic;
+      margin-top: 4px; padding: 0 14px 4px;
+    }
+    .tl-expand-btn {
+      display: inline-flex; align-items: center; gap: 4px;
+      background: none; border: none; cursor: pointer;
+      font-size: 11px; color: var(--text-3); font-family: var(--sans);
+      font-weight: 300; padding: 2px 0; letter-spacing: 0.02em;
+      transition: color 0.15s; margin-bottom: 10px;
+    }
+    .tl-expand-btn:hover { color: var(--accent); }
+    .tl-detail {
+      display: none;
+      padding: 12px 14px 13px;
+      background: var(--surface-2);
+      border: 1px solid var(--border-subtle);
+      border-radius: 10px; margin-bottom: 8px;
+    }
+    .tl-detail.expanded { display: block; }
+    .tl-restore-wrap { margin-bottom: 8px; }
+
+    /* ════════════════════════════════════════
+       CAPTURE PANEL
+    ════════════════════════════════════════ */
+    .capture-wrap { max-width: 640px; display: flex; flex-direction: column; gap: 12px; min-width: 0; overflow: hidden; }
+    .capture-header { display: flex; align-items: baseline; gap: 12px; }
+    .capture-title { font-family: var(--serif); font-size: 15px; font-weight: 400; color: var(--text-1); }
+    .capture-ts { font-size: 11.5px; color: var(--text-3); font-weight: 300; }
+
+    .summary-box {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-left: 2px solid var(--accent);
+      border-radius: 14px; padding: 16px 20px;
+      box-shadow: var(--card-shadow);
+      overflow: hidden; min-width: 0;
+    }
+    .summary-section-label {
+      font-size: 9.5px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 8px;
+    }
+    .summary-text { font-size: 13.5px; color: var(--text-1); font-weight: 400; line-height: 1.8; overflow-wrap: break-word; word-break: break-word; }
+    .summary-loading {
+      display: flex; align-items: center; gap: 10px;
+      color: var(--text-3); font-style: italic; font-size: 12.5px;
+    }
+    .spinner {
+      width: 14px; height: 14px;
+      border: 1.5px solid var(--border); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.75s linear infinite; flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .ctx-card {
+      background: var(--surface); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 16px 20px;
+      display: flex; flex-direction: column; gap: 10px;
+      box-shadow: var(--card-shadow);
+    }
+    .ctx-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .ctx-col-title {
+      font-size: 9.5px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 0.1em; color: var(--text-3); margin-bottom: 5px;
+    }
+    .ctx-list { list-style: none; padding: 0; }
+    .ctx-list li {
+      font-size: 12px; color: var(--text-2); font-weight: 400; padding: 1.5px 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+      display: flex; align-items: baseline; gap: 5px;
+    }
+    .ctx-list li::before { content: '·'; color: var(--text-3); font-size: 14px; }
+    .ctx-clip pre {
+      font-family: 'Consolas', monospace; font-size: 11px;
+      color: var(--text-2); background: var(--code-bg);
+      border: 1px solid var(--border-subtle); border-radius: 8px;
+      padding: 8px 10px; white-space: pre-wrap; word-break: break-all;
+      line-height: 1.6; max-height: 64px; overflow-y: auto;
+    }
+
+    .note-label { font-size: 12px; color: var(--text-2); font-weight: 400; margin-bottom: 6px; display: block; }
+    .note-input {
+      width: 100%; background: var(--input-bg);
+      border: 1px solid var(--border); border-radius: 10px;
+      color: var(--text-1); padding: 10px 14px;
+      font-size: 13px; font-family: var(--sans); font-weight: 400;
+      resize: none; height: 70px; line-height: 1.65;
+      transition: border-color 0.2s;
+    }
+    .note-input:focus { outline: none; border-color: var(--accent); }
+    .note-input::placeholder { color: var(--text-3); }
+    .capture-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ════════════════════════════════════════
+       SETTINGS PANEL
+    ════════════════════════════════════════ */
+    .settings-wrap { max-width: 520px; display: flex; flex-direction: column; gap: 8px; }
+    .setting-card {
+      background: var(--surface); border: 1px solid var(--card-border);
+      border-radius: 14px; padding: 18px 20px; box-shadow: var(--card-shadow);
+    }
+    .setting-card-label {
+      font-size: 9.5px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text-3); margin-bottom: 14px;
+    }
+
+    .input-row { display: flex; gap: 8px; align-items: center; }
+    .setting-input {
+      flex: 1; background: var(--input-bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-1); padding: 8px 12px;
+      font-size: 13px; font-weight: 400; font-family: var(--sans);
+      transition: border-color 0.2s;
+    }
+    .setting-input.mono { font-family: 'Consolas', monospace; letter-spacing: 0.02em; font-size: 12px; }
+    .setting-input:focus { outline: none; border-color: var(--accent); }
+    .setting-input::placeholder { color: var(--text-3); }
+
+    .setting-select {
+      width: 100%; background: var(--input-bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-1); padding: 8px 12px;
+      font-size: 13px; font-weight: 400; font-family: var(--sans);
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A56E8' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .setting-select:focus { outline: none; border-color: var(--accent); }
+    .setting-select option { background: var(--surface); }
+
+    .setting-status { font-size: 11.5px; margin-top: 8px; min-height: 16px; color: var(--success); font-weight: 400; }
+    .setting-status.error { color: var(--error); }
+
+    .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .toggle-info .toggle-label-text { font-size: 13px; color: var(--text-1); font-weight: 400; }
+    .toggle-info .toggle-desc { font-size: 11px; color: var(--text-3); margin-top: 2px; font-weight: 300; }
+    .toggle-switch { position: relative; width: 40px; height: 22px; flex-shrink: 0; }
+    .toggle-switch input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: var(--toggle-off); border-radius: 22px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: ''; position: absolute;
+      width: 16px; height: 16px; left: 3px; top: 3px;
+      background: var(--toggle-thumb); border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle-switch input:checked + .toggle-slider { background: var(--accent); }
+    .toggle-switch input:checked + .toggle-slider::before { transform: translateX(18px); background: #fff; }
+
+    .provider-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 14px; }
+    .provider-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px 4px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--surface-2);
+      cursor: pointer; font-size: 10.5px; font-family: var(--sans); font-weight: 400;
+      color: var(--text-2); text-align: center; transition: all 0.15s; line-height: 1.3;
+    }
+    .provider-btn:hover { border-color: var(--text-3); color: var(--text-1); }
+    .provider-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+    .provider-icon { font-size: 16px; }
+    .provider-section { animation: fadeIn 0.15s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
+
+    .setting-hint { font-size: 11px; color: var(--text-3); font-weight: 300; margin-top: 7px; line-height: 1.75; }
+    .setting-hint a { color: var(--accent); text-decoration: none; }
+    .setting-hint a:hover { text-decoration: underline; }
+    .model-input-wrap { position: relative; }
+    .model-input-wrap .setting-input { width: 100%; }
+
+    .shortcut-row {
+      display: flex; justify-content: space-between; align-items: center; gap: 12px;
+      padding: 4px 0; font-size: 12.5px; font-weight: 400; color: var(--text-2);
+    }
+    .shortcut-desc { flex-shrink: 0; }
+    .shortcut-input { flex: 1; max-width: 200px; text-align: center; }
+    kbd {
+      background: var(--kbd-bg); border: 1px solid var(--kbd-border);
+      border-radius: 5px; padding: 2px 8px;
+      font-size: 10.5px; font-family: 'Consolas', monospace; color: var(--kbd-fg); font-weight: 400;
+    }
+
+    /* ── Theme picker in settings panel ── */
+    .theme-picker--settings { width: fit-content; }
+    .theme-picker--settings .theme-btn { min-width: 68px; flex: none; }
+
+    /* ════════════════════════════════════════
+       BUTTONS
+    ════════════════════════════════════════ */
+    .btn-primary {
+      padding: 7px 18px; border-radius: 99px; border: none;
+      background: var(--text-1); color: #fff;
+      font-size: 12.5px; font-family: var(--sans); font-weight: 400;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+    }
+    .btn-primary:hover:not(:disabled) { background: var(--accent); box-shadow: 0 4px 18px rgba(26,86,232,0.3); }
+    .btn-primary:active:not(:disabled) { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.35; cursor: default; }
+
+    .btn-secondary {
+      padding: 7px 18px; border-radius: 99px;
+      border: 1px solid var(--border);
+      background: transparent; color: var(--text-2);
+      font-size: 12.5px; font-family: var(--sans); font-weight: 400;
+      cursor: pointer; transition: all 0.15s; letter-spacing: 0.01em;
+    }
+    .btn-secondary:hover:not(:disabled) { color: var(--text-1); border-color: var(--text-3); background: var(--surface-2); }
+    .btn-secondary:active:not(:disabled) { transform: scale(0.97); }
+    .btn-secondary:disabled { opacity: 0.35; cursor: default; }
+
+    /* ════════════════════════════════════════
+       EMPTY STATES
+    ════════════════════════════════════════ */
+    .empty-state {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; text-align: center; padding: 60px 20px; min-height: 300px;
+    }
+    .empty-icon { font-size: 36px; margin-bottom: 16px; opacity: 0.15; }
+    .empty-title { font-family: var(--serif); font-size: 14px; font-weight: 400; color: var(--text-2); margin-bottom: 8px; }
+    .empty-hint { font-size: 12.5px; font-weight: 400; color: var(--text-3); line-height: 1.75; }
+
+    /* ════════════════════════════════════════
+       HISTORY GROUPS
+    ════════════════════════════════════════ */
+    .detail-history { margin-top: 10px; }
+    .cap-history { margin-top: 6px; }
+
+    .hgroup {
+      border: 1px solid var(--border-subtle); border-radius: 8px;
+      margin-bottom: 4px; overflow: hidden; background: var(--surface);
+    }
+    .hgroup-header {
+      display: flex; align-items: center; gap: 7px;
+      width: 100%; padding: 6px 10px;
+      background: transparent; border: none; cursor: pointer;
+      text-align: left; font-family: var(--sans); transition: background 0.12s;
+    }
+    .hgroup-header:hover { background: var(--surface-3); }
+    .hgroup-icon { font-size: 12px; flex-shrink: 0; }
+    .hgroup-name { font-size: 11.5px; font-weight: 500; color: var(--text-1); flex-shrink: 0; }
+    .hgroup-badge {
+      font-size: 9.5px; padding: 1px 7px; border-radius: 99px;
+      background: var(--tag-bg); color: var(--tag-fg);
+      border: 1px solid var(--border-subtle); flex-shrink: 0; font-weight: 400;
+    }
+    .hgroup-time { font-size: 10px; color: var(--text-3); margin-left: auto; flex-shrink: 0; font-weight: 300; }
+    .hgroup-chevron { font-size: 9px; color: var(--text-3); flex-shrink: 0; margin-left: 4px; }
+    .hgroup-body {
+      list-style: none; padding: 0 10px 8px 10px;
+      border-top: 1px solid var(--border-subtle);
+      display: flex; flex-direction: column; gap: 1px;
+      background: var(--surface-2);
+    }
+    .hentry {
+      display: flex; align-items: baseline; gap: 6px; padding: 3px 0;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+    .hentry:last-child { border-bottom: none; }
+    .hentry-link {
+      font-size: 11px; font-weight: 400; color: var(--accent); text-decoration: none;
+      flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .hentry-link:hover { text-decoration: underline; }
+    .hentry--search { background: color-mix(in srgb, var(--accent-dim) 40%, transparent); border-radius: 4px; padding: 3px 6px; }
+    .hentry-search-label { font-size: 11px; font-weight: 500; color: var(--text-1); flex: 1; }
+    .hentry-time { font-size: 9.5px; color: var(--text-3); flex-shrink: 0; white-space: nowrap; font-weight: 300; }
+    .hentry--more { font-size: 10px; color: var(--text-3); font-weight: 300; }
+
+    /* ════════════════════════════════════════
+       SCROLLBAR
+    ════════════════════════════════════════ */
+    ::-webkit-scrollbar { width: 4px; height: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+  </style>
+</head>
+<body>
+
+<!-- ═══════ SIDEBAR ═══════ -->
+<nav class="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-mark">◈</div>
+    <div>
+      <div class="logo-text">ThreadKeeper</div>
+      <div class="logo-ver">v0.1</div>
+    </div>
+  </div>
+
+  <div class="sidebar-nav">
+    <button class="nav-item active" data-tab="sessions">
+      <span class="nav-icon">▤</span>セッション一覧
+    </button>
+    <button class="nav-item" data-tab="capture">
+      <span class="nav-icon">◎</span>保存・確認
+    </button>
+    <button class="nav-item" data-tab="settings">
+      <span class="nav-icon">◧</span>設定
+    </button>
+  </div>
+
+</nav>
+
+<!-- ═══════ CONTENT ═══════ -->
+<main class="content">
+
+  <!-- Sessions -->
+  <div class="panel active" id="panel-sessions">
+    <div class="panel-header">
+      <h2 class="panel-title">セッション一覧</h2>
+      <span class="panel-subtitle" id="session-count"></span>
+      <!-- Layout picker -->
+      <div class="layout-picker" style="margin-left:auto;">
+        <button class="layout-btn active" data-layout="cards" title="A: カード型">
+          <svg viewBox="0 0 14 14" fill="currentColor"><rect x="1" y="1" width="5.5" height="5.5" rx="1.2"/><rect x="7.5" y="1" width="5.5" height="5.5" rx="1.2"/><rect x="1" y="7.5" width="5.5" height="5.5" rx="1.2"/><rect x="7.5" y="7.5" width="5.5" height="5.5" rx="1.2"/></svg>
+        </button>
+        <button class="layout-btn" data-layout="list" title="B: リスト型">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="1.5" y1="4" x2="12.5" y2="4"/><line x1="1.5" y1="7" x2="12.5" y2="7"/><line x1="1.5" y1="10" x2="12.5" y2="10"/></svg>
+        </button>
+        <button class="layout-btn" data-layout="timeline" title="C: タイムライン型">
+          <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><circle cx="3.5" cy="3.5" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="7" r="1.5" fill="currentColor" stroke="none"/><circle cx="3.5" cy="10.5" r="1.5" fill="currentColor" stroke="none"/><line x1="3.5" y1="5" x2="3.5" y2="5.5"/><line x1="3.5" y1="8.5" x2="3.5" y2="9"/><line x1="6.5" y1="3.5" x2="12.5" y2="3.5"/><line x1="6.5" y1="7" x2="12.5" y2="7"/><line x1="6.5" y1="10.5" x2="12.5" y2="10.5"/></svg>
+        </button>
+      </div>
+    </div>
+    <div class="panel-body" id="session-list">
+      <div class="empty-state">
+        <div class="empty-icon">▤</div>
+        <p class="empty-title">読み込み中…</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Capture -->
+  <div class="panel" id="panel-capture">
+    <!-- rendered by app.js -->
+  </div>
+
+  <!-- Settings -->
+  <div class="panel" id="panel-settings">
+    <div class="panel-header">
+      <h2 class="panel-title">設定</h2>
+    </div>
+    <div class="panel-body">
+      <div class="settings-wrap">
+
+        <div class="setting-card">
+          <div class="setting-card-label">AI エンジン設定</div>
+          <div class="provider-picker" id="provider-picker">
+            <button class="provider-btn active" data-provider="gemini"><span class="provider-icon">🔵</span>Google<br>Gemini</button>
+            <button class="provider-btn" data-provider="openai"><span class="provider-icon">🟢</span>Open<br>AI</button>
+            <button class="provider-btn" data-provider="anthropic"><span class="provider-icon">🟠</span>Anthro<br>pic</button>
+            <button class="provider-btn" data-provider="ollama"><span class="provider-icon">🟣</span>ローカル<br>(Ollama)</button>
+          </div>
+
+          <div class="provider-section" id="section-gemini">
+            <div class="input-row">
+              <input class="setting-input mono" type="password" id="setting-api-key" placeholder="AIzaSy…" autocomplete="off" spellcheck="false" />
+              <button class="btn-primary" id="btn-save-ai-gemini">テスト&保存</button>
+            </div>
+            <select class="setting-select" id="setting-gemini-model" style="margin-top:8px;">
+              <optgroup label="── 無料枠向け（推奨）">
+                <option value="gemini-2.5-flash">Gemini 2.5 Flash — 高速・推奨</option>
+                <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash Lite — 最速・軽量</option>
+                <option value="gemini-flash-latest">Gemini Flash Latest — 常に最新</option>
+              </optgroup>
+              <optgroup label="── 高精度（有料枠向け）">
+                <option value="gemini-2.5-pro">Gemini 2.5 Pro</option>
+              </optgroup>
+            </select>
+            <div class="setting-hint">APIキーの取得: <a href="https://aistudio.google.com/apikey" id="link-gemini">aistudio.google.com/apikey</a> &nbsp;|&nbsp; テストが失敗する場合はモデルを変更してみてください</div>
+            <div class="setting-status" id="api-key-status"></div>
+          </div>
+
+          <div class="provider-section" id="section-openai" style="display:none;">
+            <div class="input-row">
+              <input class="setting-input mono" type="password" id="setting-openai-key" placeholder="sk-…" autocomplete="off" spellcheck="false" />
+              <button class="btn-primary" id="btn-save-ai-openai">テスト&保存</button>
+            </div>
+            <select class="setting-select" id="setting-openai-model" style="margin-top:8px;">
+              <optgroup label="── 低コスト（推奨）">
+                <option value="gpt-4o-mini">GPT-4o mini — 高速・安価</option>
+                <option value="gpt-4.1-mini">GPT-4.1 mini</option>
+              </optgroup>
+              <optgroup label="── 高性能">
+                <option value="gpt-4o">GPT-4o</option>
+                <option value="gpt-4.1">GPT-4.1</option>
+                <option value="o4-mini">o4-mini（推論特化）</option>
+              </optgroup>
+            </select>
+            <div class="setting-hint">APIキーの取得: <a href="https://platform.openai.com/api-keys" id="link-openai">platform.openai.com/api-keys</a></div>
+            <div class="setting-status" id="openai-key-status"></div>
+          </div>
+
+          <div class="provider-section" id="section-anthropic" style="display:none;">
+            <div class="input-row">
+              <input class="setting-input mono" type="password" id="setting-anthropic-key" placeholder="sk-ant-…" autocomplete="off" spellcheck="false" />
+              <button class="btn-primary" id="btn-save-ai-anthropic">テスト&保存</button>
+            </div>
+            <select class="setting-select" id="setting-anthropic-model" style="margin-top:8px;">
+              <optgroup label="── 低コスト（推奨）">
+                <option value="claude-3-5-haiku-latest">Claude 3.5 Haiku — 高速・安価</option>
+              </optgroup>
+              <optgroup label="── 高性能">
+                <option value="claude-3-5-sonnet-latest">Claude 3.5 Sonnet</option>
+                <option value="claude-3-7-sonnet-latest">Claude 3.7 Sonnet（拡張思考対応）</option>
+                <option value="claude-opus-4-5">Claude Opus 4.5</option>
+              </optgroup>
+            </select>
+            <div class="setting-hint">APIキーの取得: <a href="https://console.anthropic.com/" id="link-anthropic">console.anthropic.com</a></div>
+            <div class="setting-status" id="anthropic-key-status"></div>
+          </div>
+
+          <div class="provider-section" id="section-ollama" style="display:none;">
+            <div style="margin-bottom:8px;">
+              <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">サーバーURL</div>
+              <input class="setting-input" id="setting-ollama-url" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false" />
+            </div>
+            <div>
+              <div style="font-size:11px;color:var(--text-3);margin-bottom:4px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">モデル名</div>
+              <input class="setting-input" id="setting-ollama-model" placeholder="例: llama3.2 / qwen2.5 / gemma3 / phi4" autocomplete="off" spellcheck="false" />
+            </div>
+            <div style="margin-top:8px;">
+              <button class="btn-primary" id="btn-save-ai-ollama">接続テスト&保存</button>
+            </div>
+            <div class="setting-hint">
+              <a href="https://ollama.com" id="link-ollama">ollama.com</a> からインストール後、
+              <code style="font-size:11px;background:var(--code-bg);padding:1px 5px;border-radius:3px;">ollama pull llama3.2</code> などでモデルを取得
+            </div>
+            <div class="setting-status" id="ollama-status"></div>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-card-label">復元時に使用するブラウザ</div>
+          <select class="setting-select" id="setting-browser">
+            <option value="edge">Microsoft Edge</option>
+            <option value="chrome">Google Chrome</option>
+            <option value="firefox">Mozilla Firefox</option>
+            <option value="brave">Brave Browser</option>
+          </select>
+          <div class="setting-status" style="color:var(--text-3);margin-top:7px;font-size:11.5px">復元時にブラウザの起動＋キャプチャ済みURLをタブで開きます</div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-card-label">起動設定</div>
+          <div class="toggle-row">
+            <div class="toggle-info">
+              <div class="toggle-label-text">Windows ログイン時に自動起動</div>
+              <div class="toggle-desc">PC 起動時にトレイへ常駐します</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="setting-autostart" />
+              <span class="toggle-slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-card-label">ショートカットキー</div>
+          <div class="shortcut-row">
+            <span class="shortcut-desc">セッションを保存・確認</span>
+            <input class="setting-input mono shortcut-input" id="setting-capture-shortcut"
+              placeholder="例: Ctrl+Shift+S" spellcheck="false" autocomplete="off" />
+          </div>
+          <div class="shortcut-row" style="margin-top:8px;">
+            <span class="shortcut-desc">アプリを開く</span>
+            <input class="setting-input mono shortcut-input" id="setting-open-shortcut"
+              placeholder="例: Ctrl+Shift+R" spellcheck="false" autocomplete="off" />
+          </div>
+          <div style="margin-top:10px;">
+            <button class="btn-primary" id="btn-save-shortcuts" style="font-size:12px;padding:6px 16px;">保存・再登録</button>
+          </div>
+          <div class="setting-hint" style="margin-top:6px;">Electron が認識できるキー名を使用（例: Ctrl+Alt+K, F9）。他アプリと競合する場合は登録に失敗します。</div>
+          <div class="setting-status" id="shortcut-status"></div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-card-label">🕐 ブラウザ閲覧履歴の取得範囲</div>
+          <div style="margin-bottom:10px;">
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">取得モード</div>
+            <select class="setting-select" id="setting-history-mode">
+              <option value="fixed">固定時間（直近 N分）</option>
+              <option value="since-last">前回のキャプチャから現在まで</option>
+            </select>
+            <div class="setting-hint">「前回のキャプチャから」を選ぶと、最後に保存した時点から現在までの履歴を自動取得します</div>
+          </div>
+          <div id="history-range-row">
+            <div style="font-size:11px;color:var(--text-3);margin-bottom:5px;font-weight:500;text-transform:uppercase;letter-spacing:0.08em;">取得する直近の時間</div>
+            <select class="setting-select" id="setting-history-range">
+              <option value="15">直近 15分</option>
+              <option value="30">直近 30分</option>
+              <option value="60">直近 1時間（デフォルト）</option>
+              <option value="120">直近 2時間</option>
+              <option value="240">直近 4時間</option>
+              <option value="480">直近 8時間（1日の作業）</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-card-label">🌐 ブラウザ拡張機能（全タブ取得 — 推奨）</div>
+          <div id="ext-status-bar" style="display:flex;align-items:center;gap:8px;padding:9px 12px;border-radius:8px;margin-bottom:12px;background:var(--surface-2);border:1px solid var(--border);">
+            <span id="ext-status-dot" style="width:8px;height:8px;border-radius:50%;background:var(--text-3);flex-shrink:0;transition:background 0.3s;"></span>
+            <span id="ext-status-text" style="font-size:12px;color:var(--text-2);font-weight:400;">拡張機能の接続を確認中…</span>
+          </div>
+          <div style="font-size:13px;color:var(--text-2);font-weight:400;line-height:1.75;margin-bottom:10px;">
+            ブラウザ拡張機能を導入すると、<strong style="font-weight:500;">すべてのタブ</strong>のURLとページタイトルをリアルタイムで取得できます。<br>
+            特殊な起動フラグ不要。Chrome・Edge・Brave に対応しています。
+          </div>
+          <div style="background:var(--surface-2);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:12px;line-height:1.9;color:var(--text-2);font-weight:400;margin-bottom:10px;">
+            <div style="font-weight:500;margin-bottom:6px;font-size:10px;text-transform:uppercase;letter-spacing:0.1em;color:var(--text-3);">インストール手順（1回のみ）</div>
+            <ol style="padding-left:18px;margin:0;display:flex;flex-direction:column;gap:4px;">
+              <li>下の「拡張機能フォルダを開く」をクリック</li>
+              <li>Chrome / Edge で <code style="font-family:Consolas,monospace;font-size:11px;background:var(--code-bg);padding:1px 5px;border-radius:3px;">chrome://extensions</code> を開く</li>
+              <li>右上「デベロッパーモード」をオンにする</li>
+              <li>「パッケージ化されていない拡張機能を読み込む」→ 開いたフォルダを選択</li>
+              <li>ThreadKeeperアプリが起動した状態で拡張機能を読み込むと自動接続 ✅</li>
+            </ol>
+          </div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button class="btn-primary" id="btn-open-extension" style="font-size:12px;padding:6px 14px;">📁 拡張機能フォルダを開く</button>
+            <button class="btn-secondary" id="btn-check-ext" style="font-size:12px;padding:6px 14px;">🔄 接続確認</button>
+            <span style="font-size:11px;color:var(--text-3);font-weight:300;">Edge でも同じ手順で動作します</span>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-card-label">テーマ</div>
+          <div class="theme-picker theme-picker--settings">
+            <button class="theme-btn" data-theme="light"><span class="theme-icon">○</span><span>ライト</span></button>
+            <button class="theme-btn" data-theme="dark"><span class="theme-icon">●</span><span>ダーク</span></button>
+            <button class="theme-btn active" data-theme="system"><span class="theme-icon">◑</span><span>自動</span></button>
+          </div>
+        </div>
+
+        <div class="setting-card">
+          <div class="setting-card-label">データ管理</div>
+          <button class="btn-secondary" id="btn-open-folder">データフォルダを開く →</button>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>

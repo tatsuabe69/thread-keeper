@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>ThreadKeeper 設定</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
+      background: #0d0d16;
+      color: #f2f2ff;
+      padding: 20px 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      overflow-y: auto;
+    }
+
+    h1 {
+      font-size: 16px; font-weight: 700; color: #d0d8ff;
+      display: flex; align-items: center; gap: 9px;
+      padding-bottom: 14px;
+      border-bottom: 1px solid #181828;
+      margin-bottom: 2px; flex-shrink: 0;
+    }
+
+    /* Section card */
+    .section {
+      background: #111124;
+      border: 1px solid #1c1c36;
+      border-radius: 10px;
+      padding: 14px 16px;
+    }
+    .section-title {
+      font-size: 10px; color: #363660; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.1em;
+      margin-bottom: 12px;
+    }
+
+    /* Key row */
+    .key-row { display: flex; gap: 8px; align-items: center; }
+    .key-row input {
+      flex: 1; background: #0c0c20; border: 1px solid #1c1c38;
+      border-radius: 7px; color: #e0e0ff;
+      padding: 9px 12px; font-size: 12px;
+      font-family: 'Consolas', monospace; letter-spacing: 0.02em;
+      transition: border-color 0.15s;
+    }
+    .key-row input:focus { outline: none; border-color: #607aff; }
+
+    /* Select */
+    select {
+      width: 100%; background: #0c0c20;
+      border: 1px solid #1c1c38; border-radius: 7px;
+      color: #dde0ff; padding: 9px 12px;
+      font-size: 13px; font-family: inherit;
+      cursor: pointer; appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23607aff' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      padding-right: 34px;
+      transition: border-color 0.15s;
+    }
+    select:focus { outline: none; border-color: #607aff; }
+    select option { background: #181834; }
+
+    /* Toggle row */
+    .toggle-row {
+      display: flex; align-items: center;
+      justify-content: space-between; gap: 12px;
+    }
+    .toggle-label { font-size: 13px; color: #b8c0e0; }
+    .toggle-label small {
+      display: block; font-size: 11px;
+      color: #383860; margin-top: 2px;
+    }
+    .toggle { position: relative; width: 44px; height: 24px; flex-shrink: 0; }
+    .toggle input { opacity: 0; width: 0; height: 0; }
+    .toggle-slider {
+      position: absolute; inset: 0;
+      background: #1c1c30; border-radius: 24px;
+      cursor: pointer; transition: background 0.2s;
+    }
+    .toggle-slider::before {
+      content: '';
+      position: absolute; height: 18px; width: 18px;
+      left: 3px; top: 3px;
+      background: #444464; border-radius: 50%;
+      transition: transform 0.2s, background 0.2s;
+    }
+    .toggle input:checked + .toggle-slider { background: #607aff; }
+    .toggle input:checked + .toggle-slider::before {
+      transform: translateX(20px); background: #fff;
+    }
+
+    /* Shortcut rows */
+    .shortcut-row {
+      display: flex; justify-content: space-between;
+      align-items: center; padding: 5px 0;
+      font-size: 13px; color: #6070a0;
+    }
+    .shortcut-row + .shortcut-row {
+      border-top: 1px solid #161628;
+      margin-top: 5px; padding-top: 10px;
+    }
+    .kbd {
+      background: #0a0a18; border: 1px solid #1c1c30;
+      border-radius: 5px; padding: 3px 9px;
+      font-size: 11px; font-family: 'Consolas', monospace;
+      color: #6878b8;
+    }
+
+    /* Buttons */
+    button {
+      border: none; border-radius: 7px; cursor: pointer;
+      font-family: inherit; font-size: 12.5px; font-weight: 500;
+      padding: 8px 16px; transition: all 0.15s;
+    }
+    button:disabled { opacity: 0.38; cursor: default; }
+    .btn-primary { background: #607aff; color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: #506aea; }
+    .btn-secondary {
+      background: #111124; color: #6878a8;
+      border: 1px solid #1c1c36;
+    }
+    .btn-secondary:hover:not(:disabled) {
+      background: #181838; color: #8898c8;
+    }
+
+    .status-inline {
+      font-size: 11.5px; margin-top: 8px;
+      min-height: 18px; color: #30d986;
+    }
+    .status-inline.error { color: #ff5c5c; }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1a1a2e; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <h1>⚙️ 設定</h1>
+
+  <!-- API Key -->
+  <div class="section">
+    <div class="section-title">Google AI API キー</div>
+    <div class="key-row">
+      <input type="password" id="api-key" placeholder="AIzaSy..." spellcheck="false" autocomplete="off" />
+      <button class="btn-primary" id="btn-save-key">保存</button>
+    </div>
+    <div class="status-inline" id="key-status"></div>
+  </div>
+
+  <!-- Browser -->
+  <div class="section">
+    <div class="section-title">使用するブラウザ</div>
+    <select id="browser-select">
+      <option value="edge">Microsoft Edge</option>
+      <option value="chrome">Google Chrome</option>
+      <option value="firefox">Mozilla Firefox</option>
+      <option value="brave">Brave Browser</option>
+    </select>
+  </div>
+
+  <!-- Auto-start -->
+  <div class="section">
+    <div class="section-title">起動設定</div>
+    <div class="toggle-row">
+      <div class="toggle-label">
+        Windows ログイン時に自動起動
+        <small>PC を起動したらトレイに常駐</small>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-autostart" />
+        <span class="toggle-slider"></span>
+      </label>
+    </div>
+  </div>
+
+  <!-- Shortcuts -->
+  <div class="section">
+    <div class="section-title">ショートカットキー</div>
+    <div class="shortcut-row">
+      <span>セッションを保存</span>
+      <span class="kbd">Ctrl + Shift + S</span>
+    </div>
+    <div class="shortcut-row">
+      <span>セッション一覧を開く</span>
+      <span class="kbd">Ctrl + Shift + R</span>
+    </div>
+  </div>
+
+  <!-- Data -->
+  <div class="section">
+    <div class="section-title">データ</div>
+    <button class="btn-secondary" id="btn-open-folder">📁 データフォルダを開く</button>
+  </div>
+
+  <script src="settings.js"></script>
+</body>
+</html>

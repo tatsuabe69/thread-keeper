@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>ThreadKeeper</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
+      background: #0d0d16;
+      color: #f2f2ff;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding: 20px 24px;
+      gap: 13px;
+      overflow: hidden;
+    }
+
+    /* ── Header ── */
+    .hdr {
+      display: flex;
+      align-items: center;
+      gap: 13px;
+      padding-bottom: 13px;
+      border-bottom: 1px solid #1c1c2e;
+      flex-shrink: 0;
+    }
+    .hdr-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #3a58ee, #607aff);
+      border-radius: 11px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+      box-shadow: 0 3px 12px rgba(60, 90, 240, 0.4);
+      flex-shrink: 0;
+    }
+    .hdr-text h1 {
+      font-size: 15px; font-weight: 700; color: #f2f2ff;
+      letter-spacing: 0.01em;
+    }
+    .hdr-text p { font-size: 12px; color: #606888; margin-top: 2px; }
+    .hdr-now {
+      margin-left: auto; text-align: right;
+      font-size: 11px; color: #30344e; line-height: 1.55;
+    }
+
+    /* ── AI Summary card ── */
+    .summary-card {
+      background: #161626;
+      border: 1px solid #22223a;
+      border-left: 3px solid #607aff;
+      border-radius: 10px;
+      padding: 14px 18px;
+      font-size: 14px;
+      line-height: 1.8;
+      color: #c8d6ff;
+      flex: 1;
+      max-height: 148px;
+      overflow-y: auto;
+    }
+    .summary-card.loading {
+      display: flex; align-items: center; gap: 10px;
+      color: #26264a; font-style: italic; font-size: 13px;
+    }
+    .spinner {
+      width: 15px; height: 15px;
+      border: 2px solid #1e1e38;
+      border-top-color: #607aff;
+      border-radius: 50%;
+      animation: spin 0.75s linear infinite;
+      flex-shrink: 0;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Context info box ── */
+    .ctx-box {
+      background: #0a0a12;
+      border: 1px solid #141422;
+      border-radius: 8px;
+      padding: 9px 14px;
+      max-height: 78px;
+      overflow-y: auto;
+      font-size: 12px;
+      line-height: 1.7;
+      flex-shrink: 0;
+    }
+    .ctx-box .section-label {
+      display: block;
+      font-size: 10px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: 0.08em;
+      color: #282848; margin-top: 6px;
+    }
+    .ctx-box .section-label:first-child { margin-top: 0; }
+    .ctx-box ul { list-style: none; padding-left: 8px; }
+    .ctx-box li {
+      color: #4c5a8a;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    /* override JS inline style colors */
+    .ctx-box span[style*="color"] { color: #5270a0 !important; }
+
+    /* ── Note ── */
+    .note-wrap { flex-shrink: 0; }
+    .note-label {
+      display: block; font-size: 11.5px; color: #50608a;
+      margin-bottom: 6px; font-weight: 500;
+    }
+    #note {
+      width: 100%;
+      background: #10102a;
+      border: 1px solid #202040;
+      border-radius: 8px;
+      color: #e0e8ff;
+      padding: 10px 14px;
+      font-size: 13px; font-family: inherit;
+      resize: none; height: 64px; line-height: 1.6;
+      transition: border-color 0.18s;
+    }
+    #note:focus { outline: none; border-color: #607aff; background: #14143a; }
+    #note::placeholder { color: #20204a; }
+
+    /* ── Actions ── */
+    .actions {
+      display: flex; gap: 10px;
+      justify-content: flex-end; flex-shrink: 0;
+    }
+    .btn {
+      padding: 10px 24px; border-radius: 8px; border: none;
+      cursor: pointer; font-size: 13px; font-family: inherit;
+      font-weight: 500; transition: all 0.15s;
+    }
+    .btn:active:not(:disabled) { transform: scale(0.97); }
+    .btn:disabled { opacity: 0.38; cursor: default; transform: none; }
+    .btn-approve {
+      background: #607aff; color: #fff; font-weight: 600;
+      min-width: 140px;
+      box-shadow: 0 2px 12px rgba(96, 122, 255, 0.4);
+    }
+    .btn-approve:hover:not(:disabled) {
+      background: #506aea;
+      box-shadow: 0 4px 18px rgba(96, 122, 255, 0.5);
+    }
+    .btn-skip {
+      background: transparent; color: #445070;
+      border: 1px solid #1c1c30;
+    }
+    .btn-skip:hover:not(:disabled) {
+      background: #111120; color: #6878a8; border-color: #242440;
+    }
+
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #1e1e38; border-radius: 2px; }
+  </style>
+</head>
+<body>
+  <div class="hdr">
+    <div class="hdr-icon">🧠</div>
+    <div class="hdr-text">
+      <h1>ThreadKeeper</h1>
+      <p>作業文脈を保存しますか？</p>
+    </div>
+    <div class="hdr-now" id="header-time"></div>
+  </div>
+
+  <div class="summary-card loading" id="summary">
+    <span class="spinner"></span>AI 推測を生成中…
+  </div>
+
+  <div class="ctx-box" id="context-detail">
+    <span style="color:#1c1c3a">読み込み中…</span>
+  </div>
+
+  <div class="note-wrap">
+    <span class="note-label">メモを追加（任意）</span>
+    <textarea id="note" placeholder="今やっていたことを補足メモ…"></textarea>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-skip" id="btn-skip">スキップ</button>
+    <button class="btn btn-approve" id="btn-approve">✓ 保存する</button>
+  </div>
+
+  <script src="approval.js"></script>
+  <script>
+    (function () {
+      const t = document.getElementById('header-time');
+      if (!t) return;
+      const now = new Date();
+      const d = ['日','月','火','水','木','金','土'];
+      const h = String(now.getHours()).padStart(2,'0');
+      const m = String(now.getMinutes()).padStart(2,'0');
+      t.innerHTML = now.getMonth()+1+'月'+now.getDate()+'日（'+d[now.getDay()]+'）<br>'+h+':'+m;
+    })();
+  </script>
+</body>
+</html>
