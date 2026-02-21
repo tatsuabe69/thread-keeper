@@ -6,9 +6,17 @@
  *
  * The browser extension POSTs { url, title, active, windowId }[]
  * whenever tabs change. browser-collector.ts reads via getRelayTabs().
+ *
+ * Security:
+ *  - HIGH-02: CORS restricted to browser-extension origins; auth token required
+ *  - MEDIUM-02: Request body limited to 1 MB
  */
 
 import * as http from 'http';
+import * as crypto from 'crypto';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
 
 export interface RelayTab {
   url: string;
@@ -18,9 +26,12 @@ export interface RelayTab {
 }
 
 const RELAY_PORT = 9224;
+const MAX_BODY_BYTES = 1 * 1024 * 1024; // MEDIUM-02: 1 MB limit
+const TOKEN_FILE = path.join(os.homedir(), 'AppData', 'Roaming', 'ThreadKeeper', '.relay-token');
 
 let latestTabs: RelayTab[] = [];
 let server: http.Server | null = null;
+let authToken: string = '';
 
 /** Returns the most recent tab snapshot from the browser extension. */
 export function getRelayTabs(): RelayTab[] {
@@ -32,15 +43,65 @@ export function isRelayConnected(): boolean {
   return latestTabs.length > 0;
 }
 
+/** Returns the current auth token (for passing to extension via other channels). */
+export function getRelayToken(): string {
+  return authToken;
+}
+
+// ── HIGH-02: CORS — only allow browser extension origins ─────────────────────
+function isAllowedOrigin(origin: string | undefined): boolean {
+  if (!origin) return true; // no Origin header = same-origin or non-browser
+  // Allow Chrome/Edge extensions and Firefox add-ons
+  return /^(chrome-extension|moz-extension|extension):\/\//.test(origin);
+}
+
+function setCorsHeaders(res: http.ServerResponse, origin: string | undefined): void {
+  if (origin && isAllowedOrigin(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Vary', 'Origin');
+}
+
+// ── HIGH-02: Auth token ──────────────────────────────────────────────────────
+function generateToken(): string {
+  authToken = crypto.randomBytes(32).toString('hex');
+  // Write token to file so the extension can read it
+  try {
+    const dir = path.dirname(TOKEN_FILE);
+    fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(TOKEN_FILE, authToken, { encoding: 'utf-8', mode: 0o600 });
+  } catch (err) {
+    console.warn('[TK] Failed to write relay token file:', (err as Error).message);
+  }
+  return authToken;
+}
+
+function isAuthorized(req: http.IncomingMessage): boolean {
+  const header = req.headers['authorization'];
+  if (!header) return false;
+  const parts = header.split(' ');
+  return parts[0] === 'Bearer' && parts[1] === authToken;
+}
+
 /** Starts the relay HTTP server.  Safe to call multiple times (no-op if already running). */
 export function startRelayServer(): void {
   if (server) return;
 
+  generateToken();
+
   server = http.createServer((req, res) => {
-    // Allow requests from browser extensions (cross-origin)
-    res.setHeader('Access-Control-Allow-Origin', '*');
-    res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+    const origin = req.headers['origin'] as string | undefined;
+
+    // HIGH-02: Reject requests from disallowed origins
+    if (origin && !isAllowedOrigin(origin)) {
+      res.writeHead(403, { 'Content-Type': 'text/plain' });
+      res.end('Forbidden');
+      return;
+    }
+
+    setCorsHeaders(res, origin);
 
     if (req.method === 'OPTIONS') {
       res.writeHead(204);
@@ -48,9 +109,46 @@ export function startRelayServer(): void {
       return;
     }
 
+    // /ping — lightweight health check (no auth required)
+    if (req.method === 'GET' && req.url === '/ping') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end('ThreadKeeper relay OK');
+      return;
+    }
+
+    // /token — returns auth token (protected by CORS — only extensions can read)
+    if (req.method === 'GET' && req.url === '/token') {
+      res.writeHead(200, { 'Content-Type': 'text/plain' });
+      res.end(authToken);
+      return;
+    }
+
     if (req.method === 'POST' && req.url === '/tabs') {
+      // HIGH-02: Require auth token on POST
+      if (!isAuthorized(req)) {
+        res.writeHead(401, { 'Content-Type': 'text/plain' });
+        res.end('Unauthorized');
+        return;
+      }
+
       let body = '';
-      req.on('data', (chunk: string) => (body += chunk));
+      let bodyBytes = 0;
+
+      req.on('data', (chunk: Buffer | string) => {
+        const chunkStr = typeof chunk === 'string' ? chunk : chunk.toString();
+        bodyBytes += Buffer.byteLength(chunkStr);
+
+        // MEDIUM-02: Reject oversized requests
+        if (bodyBytes > MAX_BODY_BYTES) {
+          res.writeHead(413, { 'Content-Type': 'text/plain' });
+          res.end('Request entity too large');
+          req.destroy();
+          return;
+        }
+
+        body += chunkStr;
+      });
+
       req.on('end', () => {
         try {
           const parsed = JSON.parse(body);
@@ -68,14 +166,14 @@ export function startRelayServer(): void {
     }
 
     if (req.method === 'GET' && req.url === '/tabs') {
+      // HIGH-02: Require auth for reading tabs too
+      if (!isAuthorized(req)) {
+        res.writeHead(401, { 'Content-Type': 'text/plain' });
+        res.end('Unauthorized');
+        return;
+      }
       res.writeHead(200, { 'Content-Type': 'application/json' });
       res.end(JSON.stringify(latestTabs));
-      return;
-    }
-
-    if (req.method === 'GET' && req.url === '/ping') {
-      res.writeHead(200, { 'Content-Type': 'text/plain' });
-      res.end('ThreadKeeper relay OK');
       return;
     }
 
@@ -99,4 +197,6 @@ export function startRelayServer(): void {
 export function stopRelayServer(): void {
   server?.close();
   server = null;
+  // Clean up token file
+  try { fs.unlinkSync(TOKEN_FILE); } catch { /* ignore */ }
 }

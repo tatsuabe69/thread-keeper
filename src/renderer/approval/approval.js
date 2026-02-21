@@ -1,6 +1,3 @@
-/* global require */
-const { ipcRenderer } = require('electron');
-
 const summaryEl = document.getElementById('summary');
 const detailEl = document.getElementById('context-detail');
 const noteEl = document.getElementById('note');
@@ -16,7 +13,7 @@ function escapeHtml(str) {
 }
 
 async function init() {
-  const data = await ipcRenderer.invoke('get-pending-session');
+  const data = await window.electronAPI.getPendingSession();
 
   if (!data) {
     summaryEl.textContent = 'セッションデータが見つかりません。';
@@ -63,13 +60,13 @@ btnApprove.addEventListener('click', async () => {
   btnApprove.textContent = '保存中…';
 
   const userNote = noteEl.value.trim();
-  await ipcRenderer.invoke('approve-session', userNote);
+  await window.electronAPI.approveSession(userNote);
 });
 
 btnSkip.addEventListener('click', async () => {
   btnApprove.disabled = true;
   btnSkip.disabled = true;
-  await ipcRenderer.invoke('skip-session');
+  await window.electronAPI.skipSession();
 });
 
 init();

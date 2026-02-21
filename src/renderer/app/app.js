@@ -1,6 +1,5 @@
-/* global require */
+/* global window */
 'use strict';
-const { ipcRenderer } = require('electron');
 
 // ─── State ────────────────────────────────────────────────────────────────────
 let sessions = [];
@@ -13,7 +12,8 @@ let currentLayout = localStorage.getItem('ck-layout') || 'cards';
 function esc(str) {
   return String(str)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    .replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;'); // MEDIUM-05: escape single quotes
 }
 
 function formatDate(iso) {
@@ -535,7 +535,7 @@ function renderSessions() {
 async function handleRestore(id, btn) {
   btn.disabled = true;
   btn.textContent = '復元中…';
-  const result = await ipcRenderer.invoke('restore-session', id);
+  const result = await window.electronAPI.restoreSession(id);
 
   const resultEl = document.getElementById('result-' + id);
 
@@ -733,17 +733,17 @@ function renderCapturePanel() {
     const note = document.getElementById('capture-note').value.trim();
     document.getElementById('btn-approve-capture').disabled = true;
     document.getElementById('btn-skip-capture').disabled = true;
-    await ipcRenderer.invoke('approve-session', note);
+    await window.electronAPI.approveSession(note);
     pendingSession = null;
     clearBadge('capture');
-    sessions = await ipcRenderer.invoke('load-sessions');
+    sessions = await window.electronAPI.loadSessions();
     renderSessions();
     renderCapturePanel();
     switchTab('sessions');
   });
 
   document.getElementById('btn-skip-capture').addEventListener('click', async () => {
-    await ipcRenderer.invoke('skip-session');
+    await window.electronAPI.skipSession();
     pendingSession = null;
     clearBadge('capture');
     renderCapturePanel();
@@ -760,11 +760,11 @@ function initSettings() {
   if (autostart)                          autostart.checked = !!config.openAtLogin;
 
   browser.addEventListener('change', async e => {
-    await ipcRenderer.invoke('save-config', { defaultBrowser: e.target.value });
+    await window.electronAPI.saveConfig({ defaultBrowser: e.target.value });
     config.defaultBrowser = e.target.value;
   });
   autostart.addEventListener('change', async e => {
-    await ipcRenderer.invoke('save-config', { openAtLogin: e.target.checked });
+    await window.electronAPI.saveConfig({ openAtLogin: e.target.checked });
     config.openAtLogin = e.target.checked;
   });
 
@@ -782,7 +782,7 @@ function initSettings() {
   if (historyMode) {
     historyMode.value = config.historyMode || 'fixed';
     historyMode.addEventListener('change', async e => {
-      await ipcRenderer.invoke('save-config', { historyMode: e.target.value });
+      await window.electronAPI.saveConfig({ historyMode: e.target.value });
       config.historyMode = e.target.value;
       updateRangeRowVisibility();
     });
@@ -792,13 +792,13 @@ function initSettings() {
     historyRange.value = String(config.historyMinutesBack || 60);
     historyRange.addEventListener('change', async e => {
       const val = parseInt(e.target.value, 10);
-      await ipcRenderer.invoke('save-config', { historyMinutesBack: val });
+      await window.electronAPI.saveConfig({ historyMinutesBack: val });
       config.historyMinutesBack = val;
     });
   }
 
   document.getElementById('btn-open-folder').addEventListener('click', () => {
-    ipcRenderer.invoke('open-data-folder');
+    window.electronAPI.openDataFolder();
   });
 
   // ── Shortcut keys ─────────────────────────────────────────────────────────
@@ -816,8 +816,8 @@ function initSettings() {
     elShortcutStatus.className   = 'setting-status';
 
     // save-config now auto-registers shortcuts when shortcut keys change
-    await ipcRenderer.invoke('save-config', { captureShortcut: captureKey, openShortcut: openKey });
-    const result = await ipcRenderer.invoke('register-shortcuts', captureKey, openKey);
+    await window.electronAPI.saveConfig({ captureShortcut: captureKey, openShortcut: openKey });
+    const result = await window.electronAPI.registerShortcuts(captureKey, openKey);
 
     if (result.captureOk && result.openOk) {
       Object.assign(config, { captureShortcut: captureKey, openShortcut: openKey });
@@ -842,15 +842,30 @@ function initSettings() {
     try {
       const res = await fetch('http://localhost:9224/ping', { signal: AbortSignal.timeout(1000) });
       if (res.ok) {
-        // Relay server is up — now check if extension has sent tabs
-        const tabsRes = await fetch('http://localhost:9224/tabs', { signal: AbortSignal.timeout(1000) });
-        const tabs = await tabsRes.json();
-        if (tabs.length > 0) {
-          extDot.style.background  = 'var(--success)';
-          extText.textContent = '✅ 拡張機能が接続されています（' + tabs.length + ' タブを認識中）';
+        // Relay server is up — check if extension has sent tabs
+        // First get auth token (CORS-protected), then check tabs
+        let token = '';
+        try {
+          const tokenRes = await fetch('http://localhost:9224/token', { signal: AbortSignal.timeout(1000) });
+          if (tokenRes.ok) token = await tokenRes.text();
+        } catch { /* ignore */ }
+
+        if (token) {
+          const tabsRes = await fetch('http://localhost:9224/tabs', {
+            signal: AbortSignal.timeout(1000),
+            headers: { 'Authorization': 'Bearer ' + token },
+          });
+          const tabs = await tabsRes.json();
+          if (tabs.length > 0) {
+            extDot.style.background  = 'var(--success)';
+            extText.textContent = '✅ 拡張機能が接続されています（' + tabs.length + ' タブを認識中）';
+          } else {
+            extDot.style.background  = '#f59e0b';
+            extText.textContent = '⚠️ サーバーは起動中ですが拡張機能が未接続です';
+          }
         } else {
           extDot.style.background  = '#f59e0b';
-          extText.textContent = '⚠️ サーバーは起動中ですが拡張機能が未接続です';
+          extText.textContent = '⚠️ サーバーは起動中ですがトークン取得に失敗しました';
         }
       }
     } catch {
@@ -861,7 +876,7 @@ function initSettings() {
 
   if (btnOpenExt) {
     btnOpenExt.addEventListener('click', () => {
-      ipcRenderer.invoke('open-extension-folder');
+      window.electronAPI.openExtensionFolder();
     });
   }
   if (btnCheckExt) {
@@ -878,7 +893,7 @@ function initSettings() {
     const el = document.getElementById(id);
     if (el) el.addEventListener('click', e => {
       e.preventDefault();
-      ipcRenderer.invoke('open-url', el.href);
+      window.electronAPI.openUrl(el.href);
     });
   });
 
@@ -897,7 +912,7 @@ function initSettings() {
     btn.addEventListener('click', async () => {
       currentProvider = btn.dataset.provider;
       showProvider(currentProvider);
-      await ipcRenderer.invoke('save-config', { aiProvider: currentProvider });
+      await window.electronAPI.saveConfig({ aiProvider: currentProvider });
       config.aiProvider = currentProvider;
     });
   });
@@ -915,7 +930,7 @@ function initSettings() {
   }
 
   elGeminiModel.addEventListener('change', async e => {
-    await ipcRenderer.invoke('save-config', { aiModel: e.target.value, geminiModel: e.target.value });
+    await window.electronAPI.saveConfig({ aiModel: e.target.value, geminiModel: e.target.value });
     config.aiModel = e.target.value;
   });
 
@@ -929,9 +944,9 @@ function initSettings() {
       elGeminiStatus.className   = 'setting-status error';
       return;
     }
-    const result = await ipcRenderer.invoke('test-ai-config', { provider: 'gemini', googleApiKey: key, model });
+    const result = await window.electronAPI.testAiConfig({ provider: 'gemini', googleApiKey: key, model });
     if (result.ok) {
-      await ipcRenderer.invoke('save-config', { googleApiKey: key, aiModel: model, geminiModel: model, aiProvider: 'gemini' });
+      await window.electronAPI.saveConfig({ googleApiKey: key, aiModel: model, geminiModel: model, aiProvider: 'gemini' });
       Object.assign(config, { googleApiKey: key, aiModel: model, geminiModel: model, aiProvider: 'gemini' });
       elGeminiStatus.textContent = '✅ 保存しました（' + model + '）';
       elGeminiStatus.className   = 'setting-status';
@@ -951,7 +966,7 @@ function initSettings() {
 
   elOpenAIModel.addEventListener('change', async e => {
     if (config.aiProvider !== 'openai') return;
-    await ipcRenderer.invoke('save-config', { aiModel: e.target.value });
+    await window.electronAPI.saveConfig({ aiModel: e.target.value });
     config.aiModel = e.target.value;
   });
 
@@ -965,9 +980,9 @@ function initSettings() {
       elOpenAIStatus.className   = 'setting-status error';
       return;
     }
-    const result = await ipcRenderer.invoke('test-ai-config', { provider: 'openai', openaiApiKey: key, model });
+    const result = await window.electronAPI.testAiConfig({ provider: 'openai', openaiApiKey: key, model });
     if (result.ok) {
-      await ipcRenderer.invoke('save-config', { openaiApiKey: key, aiModel: model, aiProvider: 'openai' });
+      await window.electronAPI.saveConfig({ openaiApiKey: key, aiModel: model, aiProvider: 'openai' });
       Object.assign(config, { openaiApiKey: key, aiModel: model, aiProvider: 'openai' });
       currentProvider = 'openai';
       showProvider('openai');
@@ -989,7 +1004,7 @@ function initSettings() {
 
   elAnthModel.addEventListener('change', async e => {
     if (config.aiProvider !== 'anthropic') return;
-    await ipcRenderer.invoke('save-config', { aiModel: e.target.value });
+    await window.electronAPI.saveConfig({ aiModel: e.target.value });
     config.aiModel = e.target.value;
   });
 
@@ -1003,9 +1018,9 @@ function initSettings() {
       elAnthStatus.className   = 'setting-status error';
       return;
     }
-    const result = await ipcRenderer.invoke('test-ai-config', { provider: 'anthropic', anthropicApiKey: key, model });
+    const result = await window.electronAPI.testAiConfig({ provider: 'anthropic', anthropicApiKey: key, model });
     if (result.ok) {
-      await ipcRenderer.invoke('save-config', { anthropicApiKey: key, aiModel: model, aiProvider: 'anthropic' });
+      await window.electronAPI.saveConfig({ anthropicApiKey: key, aiModel: model, aiProvider: 'anthropic' });
       Object.assign(config, { anthropicApiKey: key, aiModel: model, aiProvider: 'anthropic' });
       currentProvider = 'anthropic';
       showProvider('anthropic');
@@ -1030,9 +1045,9 @@ function initSettings() {
     const model = elOllamaModel.value.trim() || 'llama3.2';
     elOllamaStatus.textContent = '接続テスト中…';
     elOllamaStatus.className   = 'setting-status';
-    const result = await ipcRenderer.invoke('test-ai-config', { provider: 'ollama', ollamaBaseUrl: url, model });
+    const result = await window.electronAPI.testAiConfig({ provider: 'ollama', ollamaBaseUrl: url, model });
     if (result.ok) {
-      await ipcRenderer.invoke('save-config', { ollamaBaseUrl: url, aiModel: model, aiProvider: 'ollama' });
+      await window.electronAPI.saveConfig({ ollamaBaseUrl: url, aiModel: model, aiProvider: 'ollama' });
       Object.assign(config, { ollamaBaseUrl: url, aiModel: model, aiProvider: 'ollama' });
       currentProvider = 'ollama';
       showProvider('ollama');
@@ -1047,10 +1062,10 @@ function initSettings() {
 }
 
 // ─── IPC Events ───────────────────────────────────────────────────────────────
-ipcRenderer.on('navigate', (_, tab) => switchTab(tab));
+window.electronAPI.onNavigate((tab) => switchTab(tab));
 
 // Phase 0: Shortcut pressed — show collecting state immediately
-ipcRenderer.on('capture-started', () => {
+window.electronAPI.onCaptureStarted(() => {
   isCollecting = true;
   pendingSession = null;
   renderCapturePanel();
@@ -1059,7 +1074,7 @@ ipcRenderer.on('capture-started', () => {
 });
 
 // Phase 1: Context collected — show context (AI still loading)
-ipcRenderer.on('new-session-pending', (_, data) => {
+window.electronAPI.onNewSessionPending((data) => {
   isCollecting = false;
   pendingSession = data;
   renderCapturePanel();
@@ -1068,14 +1083,14 @@ ipcRenderer.on('new-session-pending', (_, data) => {
 });
 
 // Capture error
-ipcRenderer.on('capture-error', (_, msg) => {
+window.electronAPI.onCaptureError((msg) => {
   isCollecting = false;
   pendingSession = null;
   renderCapturePanel();
 });
 
 // AI summary arrived — update the summary box in-place without full re-render
-ipcRenderer.on('session-summary-ready', (_, aiSummary) => {
+window.electronAPI.onSessionSummaryReady((aiSummary) => {
   if (!pendingSession) return;
   pendingSession.aiSummary = aiSummary;
 
@@ -1091,11 +1106,11 @@ ipcRenderer.on('session-summary-ready', (_, aiSummary) => {
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   const [loadedSessions, loadedConfig, loadedPending, captureState, loadedInitialTab] = await Promise.all([
-    ipcRenderer.invoke('load-sessions'),
-    ipcRenderer.invoke('get-config'),
-    ipcRenderer.invoke('get-pending-session'),
-    ipcRenderer.invoke('get-capture-state'),
-    ipcRenderer.invoke('get-initial-tab'),
+    window.electronAPI.loadSessions(),
+    window.electronAPI.getConfig(),
+    window.electronAPI.getPendingSession(),
+    window.electronAPI.getCaptureState(),
+    window.electronAPI.getInitialTab(),
   ]);
   sessions = loadedSessions;
   config = loadedConfig;
@@ -1115,7 +1130,7 @@ async function init() {
       const t = btn.dataset.theme;
       applyTheme(t);
       config.theme = t;
-      await ipcRenderer.invoke('save-config', { theme: t });
+      await window.electronAPI.saveConfig({ theme: t });
     });
   });
 
@@ -1189,7 +1204,7 @@ async function init() {
     if (!link) return;
     e.preventDefault();
     const url = link.dataset.url;
-    if (url) ipcRenderer.invoke('open-url', url);
+    if (url) window.electronAPI.openUrl(url);
   });
 
   // File path open — event delegation
@@ -1198,7 +1213,7 @@ async function init() {
     if (!link) return;
     e.preventDefault();
     const filePath = link.dataset.path;
-    if (filePath) ipcRenderer.invoke('open-path', filePath);
+    if (filePath) window.electronAPI.openPath(filePath);
   });
 
   // Initial tab + badge

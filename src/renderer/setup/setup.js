@@ -1,6 +1,3 @@
-/* global require */
-const { ipcRenderer, shell } = require('electron');
-
 const inputEl = document.getElementById('api-key');
 const browserSelect = document.getElementById('browser-select');
 const btnSave = document.getElementById('btn-save');
@@ -10,7 +7,7 @@ const linkAistudio = document.getElementById('link-aistudio');
 
 linkAistudio.addEventListener('click', (e) => {
   e.preventDefault();
-  shell.openExternal('https://aistudio.google.com/apikey');
+  window.electronAPI.openExternal('https://aistudio.google.com/apikey');
 });
 
 function setStatus(type, msg) {
@@ -32,15 +29,15 @@ btnSave.addEventListener('click', async () => {
   btnSave.disabled = true;
   setStatus('loading', '接続テスト中…');
 
-  const result = await ipcRenderer.invoke('test-api-key', key);
+  const result = await window.electronAPI.testApiKey(key);
 
   if (result.ok) {
     setStatus('success', '✅ 接続成功！設定を保存しました。');
-    await ipcRenderer.invoke('save-config', {
+    await window.electronAPI.saveConfig({
       googleApiKey: key,
       defaultBrowser: browserSelect.value,
     });
-    setTimeout(() => ipcRenderer.invoke('close-setup'), 800);
+    setTimeout(() => window.electronAPI.closeSetup(), 800);
   } else {
     setStatus('error', '❌ ' + (result.error || '接続に失敗しました。キーを確認してください。'));
     btnSave.disabled = false;
@@ -49,8 +46,8 @@ btnSave.addEventListener('click', async () => {
 
 btnSkip.addEventListener('click', async () => {
   // ブラウザ選択だけは保存してからスキップ
-  await ipcRenderer.invoke('save-config', { defaultBrowser: browserSelect.value });
-  await ipcRenderer.invoke('close-setup');
+  await window.electronAPI.saveConfig({ defaultBrowser: browserSelect.value });
+  await window.electronAPI.closeSetup();
 });
 
 // Focus input on load

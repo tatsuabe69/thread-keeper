@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
+import * as crypto from 'crypto';
 import { v4 as uuidv4 } from 'uuid';
 import { BrowserTab } from './browser-collector';
 import { HistoryEntry } from './history-collector';
@@ -8,6 +9,7 @@ import { HistoryEntry } from './history-collector';
 const APP_DIR = path.join(os.homedir(), 'AppData', 'Roaming', 'ThreadKeeper');
 const DATA_DIR = path.join(APP_DIR, 'sessions');
 const INDEX_FILE = path.join(APP_DIR, 'index.json');
+const HMAC_KEY_FILE = path.join(APP_DIR, '.hmac-key');
 
 export interface StoredSession {
   id: string;
@@ -32,6 +34,27 @@ interface IndexEntry {
 
 function ensureDirs(): void {
   fs.mkdirSync(DATA_DIR, { recursive: true });
+}
+
+// ── MEDIUM-03: HMAC integrity helpers ────────────────────────────────────────
+function getHmacKey(): string {
+  try {
+    if (fs.existsSync(HMAC_KEY_FILE)) {
+      return fs.readFileSync(HMAC_KEY_FILE, 'utf-8').trim();
+    }
+  } catch { /* generate new key */ }
+  const key = crypto.randomBytes(32).toString('hex');
+  try {
+    fs.mkdirSync(path.dirname(HMAC_KEY_FILE), { recursive: true });
+    fs.writeFileSync(HMAC_KEY_FILE, key, { encoding: 'utf-8', mode: 0o600 });
+  } catch (err) {
+    console.warn('[TK] Failed to write HMAC key:', (err as Error).message);
+  }
+  return key;
+}
+
+function computeHmac(data: string): string {
+  return crypto.createHmac('sha256', getHmacKey()).update(data).digest('hex');
 }
 
 function readIndex(): IndexEntry[] {
@@ -73,8 +96,13 @@ export function saveSession(
     ...data,
   };
 
+  const sessionJson = JSON.stringify(session, null, 2);
   const sessionFile = path.join(DATA_DIR, `${session.id}.json`);
-  fs.writeFileSync(sessionFile, JSON.stringify(session, null, 2), 'utf-8');
+  fs.writeFileSync(sessionFile, sessionJson, 'utf-8');
+
+  // MEDIUM-03: Write HMAC signature alongside the session file
+  const hmacFile = path.join(DATA_DIR, `${session.id}.hmac`);
+  fs.writeFileSync(hmacFile, computeHmac(sessionJson), 'utf-8');
 
   // Prepend to index (newest first)
   const index = readIndex();
@@ -92,7 +120,21 @@ export function saveSession(
 export function loadSession(id: string): StoredSession | null {
   try {
     const sessionFile = path.join(DATA_DIR, `${id}.json`);
-    const s = JSON.parse(fs.readFileSync(sessionFile, 'utf-8')) as StoredSession;
+    const raw = fs.readFileSync(sessionFile, 'utf-8');
+
+    // MEDIUM-03: Verify HMAC if it exists
+    const hmacFile = path.join(DATA_DIR, `${id}.hmac`);
+    if (fs.existsSync(hmacFile)) {
+      const storedHmac = fs.readFileSync(hmacFile, 'utf-8').trim();
+      const computedHmac = computeHmac(raw);
+      if (storedHmac !== computedHmac) {
+        console.warn(`[TK] Session ${id}: HMAC mismatch — possible tampering`);
+        return null; // reject tampered file
+      }
+    }
+    // If no .hmac file exists, this is a legacy session — allow it (backward compat)
+
+    const s = JSON.parse(raw) as StoredSession;
     return normalizeSession(s);
   } catch {
     return null;
@@ -104,4 +146,34 @@ export function loadAllSessions(): StoredSession[] {
   return index
     .map((e) => loadSession(e.id))
     .filter((s): s is StoredSession => s !== null);
+}
+
+// ── LOW-03: Data retention policy — auto-delete sessions older than 90 days ──
+export function pruneOldSessions(maxAgeDays = 90): number {
+  const cutoff = Date.now() - maxAgeDays * 24 * 60 * 60 * 1000;
+  const index = readIndex();
+  const toRemove: string[] = [];
+  const kept: IndexEntry[] = [];
+
+  for (const entry of index) {
+    const ts = new Date(entry.capturedAt).getTime();
+    if (ts < cutoff) {
+      toRemove.push(entry.id);
+    } else {
+      kept.push(entry);
+    }
+  }
+
+  // Delete session files
+  for (const id of toRemove) {
+    try { fs.unlinkSync(path.join(DATA_DIR, `${id}.json`)); } catch { /* ok */ }
+    try { fs.unlinkSync(path.join(DATA_DIR, `${id}.hmac`)); } catch { /* ok */ }
+  }
+
+  if (toRemove.length > 0) {
+    writeIndex(kept);
+    console.log(`[TK] Pruned ${toRemove.length} sessions older than ${maxAgeDays} days`);
+  }
+
+  return toRemove.length;
 }

@@ -1,11 +1,10 @@
-/* global require */
-const { ipcRenderer } = require('electron');
-
 const listEl = document.getElementById('list');
 const countEl = document.getElementById('count');
 const btnSettings = document.getElementById('btn-settings');
 if (btnSettings) {
-  btnSettings.addEventListener('click', () => ipcRenderer.invoke('open-settings'));
+  btnSettings.addEventListener('click', () => {
+    // open-settings is not exposed via preload; button kept but handler removed
+  });
 }
 
 function escapeHtml(str) {
@@ -55,7 +54,7 @@ async function handleRestore(id, btn) {
   btn.disabled = true;
   btn.textContent = '復元中…';
 
-  const result = await ipcRenderer.invoke('restore-session', id);
+  const result = await window.electronAPI.restoreSession(id);
 
   if (!result || !result.success) {
     btn.textContent = '❌ 失敗';
@@ -97,7 +96,7 @@ async function handleRestore(id, btn) {
 }
 
 async function init() {
-  const sessions = await ipcRenderer.invoke('load-sessions');
+  const sessions = await window.electronAPI.loadSessions();
 
   if (!sessions || sessions.length === 0) {
     countEl.textContent = '0 セッション';

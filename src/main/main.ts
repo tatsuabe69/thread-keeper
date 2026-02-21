@@ -12,7 +12,7 @@ import * as path from 'path';
 
 import { captureContext, SessionData } from './session/collector';
 import { generateSessionSummary, testAiConfig, TestAiConfig } from './ai/anthropic-client';
-import { saveSession, loadAllSessions, loadSession } from './session/session-store';
+import { saveSession, loadAllSessions, loadSession, pruneOldSessions } from './session/session-store';
 import { loadConfig, saveConfig, isConfigured, migrateFromDotenv } from './config-store';
 import { startRelayServer } from './session/tab-relay-server';
 
@@ -55,7 +55,12 @@ function openMainWindow(tab = 'sessions'): void {
     height: 660,
     minWidth: 800,
     minHeight: 540,
-    webPreferences: { nodeIntegration: true, contextIsolation: false },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+      sandbox: true,
+    },
     title: 'ThreadKeeper',
     show: false,
   });
@@ -78,7 +83,12 @@ function openSetupWindow(): void {
   setupWindow = new BrowserWindow({
     width: 480,
     height: 420,
-    webPreferences: { nodeIntegration: true, contextIsolation: false },
+    webPreferences: {
+      nodeIntegration: false,
+      contextIsolation: true,
+      preload: path.join(__dirname, 'preload.js'),
+      sandbox: true,
+    },
     resizable: false,
     title: 'ThreadKeeper — セットアップ',
     alwaysOnTop: true,
@@ -114,7 +124,10 @@ async function captureSession(): Promise<void> {
         console.log(`[TK] History mode: since-last → ${historyMinutes} min`);
       }
     }
-    context = await captureContext(historyMinutes);
+    context = await captureContext({
+      historyMinutesBack: historyMinutes,
+      clipboardCapture: cfg.clipboardCapture !== false, // LOW-04
+    });
   } catch (err) {
     console.error('[TK] Context capture error:', err);
     isCapturing = false;
@@ -248,27 +261,34 @@ function registerIpc(): void {
     const launched: string[] = [];
     const seen = new Set<string>();
 
+    // CRITICAL-02: Validate process names to prevent command injection
+    const SAFE_PROCESS_NAME = /^[a-zA-Z0-9._\- ]+$/;
+
     for (const win of session.windows) {
       const nameLower = win.name.toLowerCase();
       if (SKIP_PROCESSES.has(nameLower)) continue;
       const processName = BROWSER_PROCESSES.has(nameLower) ? preferredBrowser : win.name;
+      if (!SAFE_PROCESS_NAME.test(processName)) continue; // reject suspicious names
       const processLower = processName.toLowerCase();
       if (seen.has(processLower)) continue;
       seen.add(processLower);
       try {
-        const script =
-          `$p = Get-Process "${processName}" -ErrorAction SilentlyContinue | ` +
-          `Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1; ` +
-          `if ($p) { ` +
-          `  Add-Type -Name U32 -Namespace W -MemberDefinition '[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);'; ` +
-          `  [W.U32]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; ` +
-          `  Write-Output "focused" ` +
-          `} else { ` +
-          `  Start-Process "${processName}" -ErrorAction SilentlyContinue; ` +
-          `  Write-Output "launched" ` +
-          `}`;
-        const { stdout } = await execFileAsync('powershell',
-          ['-NoProfile', '-NonInteractive', '-Command', script], { timeout: 5000 });
+        // Use safe parameter passing (no string interpolation into script)
+        const { stdout } = await execFileAsync('powershell', [
+          '-NoProfile', '-NonInteractive', '-Command',
+          '$name = $args[0]; ' +
+          '$p = Get-Process -Name $name -ErrorAction SilentlyContinue | ' +
+          'Where-Object { $_.MainWindowHandle -ne 0 } | Select-Object -First 1; ' +
+          'if ($p) { ' +
+          '  Add-Type -Name U32 -Namespace W -MemberDefinition \'[DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr h);\'; ' +
+          '  [W.U32]::SetForegroundWindow($p.MainWindowHandle) | Out-Null; ' +
+          '  Write-Output "focused" ' +
+          '} else { ' +
+          '  Start-Process $name -ErrorAction SilentlyContinue; ' +
+          '  Write-Output "launched" ' +
+          '}',
+          processName,  // passed as $args[0], not interpolated
+        ], { timeout: 5000 });
         launched.push(`${processName} (${stdout.trim()})`);
       } catch { /* ignore */ }
     }
@@ -282,7 +302,13 @@ function registerIpc(): void {
     let urlsOpened = 0;
 
     for (const url of tabUrls) {
-      try { await shell.openExternal(url); urlsOpened++; } catch { /* ignore */ }
+      // HIGH-03: Strict URL validation before shell.openExternal
+      try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') continue;
+        await shell.openExternal(parsed.href);
+        urlsOpened++;
+      } catch { /* ignore */ }
     }
 
     return { success: true, session, launched, urlsOpened, clipboardRestored };
@@ -327,21 +353,30 @@ function registerIpc(): void {
   });
 
   ipcMain.handle('open-url', (_e, url: string) => {
-    if (/^https?:\/\//.test(url)) shell.openExternal(url);
+    // HIGH-03: Strict URL validation
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+        shell.openExternal(parsed.href);
+      }
+    } catch { /* invalid URL — silently ignore */ }
   });
 
   ipcMain.handle('open-path', async (_e, filePath: string) => {
     if (!filePath) return;
+    const { homedir } = await import('os');
+    const home = homedir();
     if (path.isAbsolute(filePath)) {
-      // New sessions: full path stored — open directly
-      shell.openPath(filePath);
+      // HIGH-03: Normalize and restrict to home directory
+      const normalized = path.normalize(filePath);
+      if (!normalized.startsWith(home)) return; // block path traversal
+      shell.openPath(normalized);
     } else {
       // Legacy: only filename stored — open the .lnk in Recent folder
-      // Windows follows the shortcut to the actual file/folder
-      const { homedir } = await import('os');
+      const safeName = path.basename(filePath); // strip any ../ attempts
       const lnk = path.join(
-        homedir(), 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Recent',
-        filePath + '.lnk'
+        home, 'AppData', 'Roaming', 'Microsoft', 'Windows', 'Recent',
+        safeName + '.lnk'
       );
       shell.openPath(lnk);
     }
@@ -359,6 +394,12 @@ app.whenReady().then(() => {
   startRelayServer(); // タブリレーサーバー起動 (port 9224)
   registerIpc();
   createTray();
+
+  // LOW-03: Prune sessions older than 90 days on startup
+  try { pruneOldSessions(90); } catch (err) {
+    console.warn('[TK] Session pruning failed:', (err as Error).message);
+  }
+
   const config = loadConfig();
   app.setLoginItemSettings({ openAtLogin: config.openAtLogin });
   registerShortcuts(

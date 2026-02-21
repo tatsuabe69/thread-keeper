@@ -2,10 +2,11 @@
 <html lang="ja" data-theme="system">
 <head>
   <meta charset="UTF-8" />
+  <!-- MEDIUM-01: Content Security Policy -->
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:9224; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none';">
   <title>ThreadKeeper</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@300;400&family=Noto+Sans+JP:wght@300;400;500&display=swap" rel="stylesheet">
+  <!-- MEDIUM-04: Removed Google Fonts CDN — using system font stack -->
   <style>
     /* ════════════════════════════════════════
        DESIGN TOKENS
@@ -51,8 +52,8 @@
       --restore-bg:     rgba(13,148,136,0.06);
       --restore-border: rgba(13,148,136,0.22);
       --restore-fg:     #0D9488;
-      --serif:          'Noto Serif JP', 'Yu Mincho', serif;
-      --sans:           'Noto Sans JP', 'Yu Gothic UI', 'Segoe UI', sans-serif;
+      --serif:          'Yu Mincho', Georgia, 'Hiragino Mincho ProN', serif;
+      --sans:           system-ui, -apple-system, 'Yu Gothic UI', 'Segoe UI', 'Hiragino Sans', sans-serif;
       color-scheme: light;
     }
 
@@ -97,8 +98,8 @@
       --restore-bg:     rgba(45,212,191,0.07);
       --restore-border: rgba(45,212,191,0.18);
       --restore-fg:     #2DD4BF;
-      --serif:          'Noto Serif JP', 'Yu Mincho', serif;
-      --sans:           'Noto Sans JP', 'Yu Gothic UI', 'Segoe UI', sans-serif;
+      --serif:          'Yu Mincho', Georgia, 'Hiragino Mincho ProN', serif;
+      --sans:           system-ui, -apple-system, 'Yu Gothic UI', 'Segoe UI', 'Hiragino Sans', sans-serif;
       color-scheme: dark;
     }
 
@@ -144,8 +145,8 @@
         --restore-bg:     rgba(45,212,191,0.07);
         --restore-border: rgba(45,212,191,0.18);
         --restore-fg:     #2DD4BF;
-        --serif:          'Noto Serif JP', 'Yu Mincho', serif;
-        --sans:           'Noto Sans JP', 'Yu Gothic UI', 'Segoe UI', sans-serif;
+        --serif:          'Yu Mincho', Georgia, 'Hiragino Mincho ProN', serif;
+        --sans:           system-ui, -apple-system, 'Yu Gothic UI', 'Segoe UI', 'Hiragino Sans', sans-serif;
         color-scheme: dark;
       }
     }

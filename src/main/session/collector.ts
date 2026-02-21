@@ -17,7 +17,19 @@ export interface SessionData {
   browserUrls?: string[];
 }
 
-export async function captureContext(historyMinutesBack = 60): Promise<SessionData> {
+export interface CaptureOptions {
+  historyMinutesBack?: number;
+  clipboardCapture?: boolean;  // LOW-04: opt-out of clipboard capture
+}
+
+export async function captureContext(optionsOrMinutes: CaptureOptions | number = 60): Promise<SessionData> {
+  // Support both legacy (number) and new (object) calling convention
+  const opts: CaptureOptions = typeof optionsOrMinutes === 'number'
+    ? { historyMinutesBack: optionsOrMinutes }
+    : optionsOrMinutes;
+  const historyMinutesBack = opts.historyMinutesBack ?? 60;
+  const shouldCaptureClipboard = opts.clipboardCapture !== false;
+
   const [windows, recentFiles, browserTabs, browserHistory] = await Promise.all([
     collectWindows(),
     Promise.resolve(collectRecentFiles()),
@@ -25,7 +37,7 @@ export async function captureContext(historyMinutesBack = 60): Promise<SessionDa
     collectBrowserHistory(historyMinutesBack),
   ]);
 
-  const clipboard = collectClipboard();
+  const clipboard = shouldCaptureClipboard ? collectClipboard() : '';
 
   return { windows, clipboard, recentFiles, browserTabs, browserHistory };
 }
