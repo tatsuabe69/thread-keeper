@@ -262,5 +262,6 @@
   "update_checking": "V\u00e9rification des mises \u00e0 jour\u2026",
   "tray_check_update": "\ud83d\udd04 V\u00e9rifier les mises \u00e0 jour",
   "settings_auto_update": "V\u00e9rifier les mises \u00e0 jour au d\u00e9marrage",
-  "settings_auto_update_desc": "Vous avertit lorsqu'une nouvelle version est disponible"
+  "settings_auto_update_desc": "Vous avertit lorsqu'une nouvelle version est disponible",
+  "setup_help_link": "Besoin d'aide ? Cliquez ici \u2192"
 }

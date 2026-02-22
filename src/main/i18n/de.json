@@ -262,5 +262,6 @@
   "update_checking": "Suche nach Updates\u2026",
   "tray_check_update": "\ud83d\udd04 Nach Updates suchen",
   "settings_auto_update": "Beim Start nach Updates suchen",
-  "settings_auto_update_desc": "Benachrichtigt Sie, wenn eine neue Version verf\u00fcgbar ist"
+  "settings_auto_update_desc": "Benachrichtigt Sie, wenn eine neue Version verf\u00fcgbar ist",
+  "setup_help_link": "Brauchen Sie Hilfe? Klicken Sie hier \u2192"
 }

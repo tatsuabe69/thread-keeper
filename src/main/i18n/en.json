@@ -262,5 +262,6 @@
   "update_checking": "Checking for updates\u2026",
   "tray_check_update": "\ud83d\udd04 Check for Updates",
   "settings_auto_update": "Check for updates on startup",
-  "settings_auto_update_desc": "Notifies you when a new version is available"
+  "settings_auto_update_desc": "Notifies you when a new version is available",
+  "setup_help_link": "Need help? Click here →"
 }

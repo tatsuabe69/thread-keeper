@@ -84,8 +84,8 @@ function openMainWindow(tab = 'sessions'): void {
 function openSetupWindow(): void {
   if (setupWindow) { setupWindow.focus(); return; }
   setupWindow = new BrowserWindow({
-    width: 480,
-    height: 420,
+    width: 560,
+    height: 660,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,

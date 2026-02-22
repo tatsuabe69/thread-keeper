@@ -1,123 +1,276 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="ja" data-theme="system">
 <head>
   <meta charset="UTF-8" />
-  <!-- MEDIUM-01: Content Security Policy -->
   <meta http-equiv="Content-Security-Policy"
-        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none';">
-  <title>ThreadKeeper セットアップ</title>
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' http://localhost:9224; font-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none';">
+  <title>ThreadKeeper Setup</title>
   <style>
+    :root, [data-theme="light"] {
+      --bg: #F7F7FA;
+      --surface: #FFFFFF;
+      --surface-2: #F7F7FA;
+      --surface-3: #EFEFF4;
+      --border: rgba(17,17,24,0.11);
+      --border-subtle: rgba(17,17,24,0.07);
+      --accent: #1A56E8;
+      --accent-hover: #1244C8;
+      --accent-dim: rgba(26,86,232,0.07);
+      --accent-text: #ffffff;
+      --text-1: #111118;
+      --text-2: rgba(17,17,24,0.72);
+      --text-3: rgba(17,17,24,0.50);
+      --success: #0D9488;
+      --error: #DC2626;
+      --card-border: rgba(17,17,24,0.09);
+      --card-shadow: 0 1px 4px rgba(0,0,0,0.04), 0 4px 14px rgba(0,0,0,0.03);
+      --input-bg: #F7F7FA;
+      --divider: rgba(17,17,24,0.08);
+      --sans: system-ui, -apple-system, 'Yu Gothic UI', 'Segoe UI', 'Hiragino Sans', sans-serif;
+      color-scheme: light;
+    }
+
+    [data-theme="dark"] {
+      --bg: #0D0D11;
+      --surface: #13131A;
+      --surface-2: #18181F;
+      --surface-3: #1E1E27;
+      --border: rgba(255,255,255,0.09);
+      --border-subtle: rgba(255,255,255,0.05);
+      --accent: #5080F0;
+      --accent-hover: #6490F8;
+      --accent-dim: rgba(80,128,240,0.12);
+      --accent-text: #ffffff;
+      --text-1: rgba(255,255,255,0.92);
+      --text-2: rgba(255,255,255,0.60);
+      --text-3: rgba(255,255,255,0.35);
+      --success: #2DD4BF;
+      --error: #F87171;
+      --card-border: rgba(255,255,255,0.07);
+      --card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+      --input-bg: #0F0F15;
+      --divider: rgba(255,255,255,0.07);
+      --sans: system-ui, -apple-system, 'Yu Gothic UI', 'Segoe UI', 'Hiragino Sans', sans-serif;
+      color-scheme: dark;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      [data-theme="system"] {
+        --bg: #0D0D11;
+        --surface: #13131A;
+        --surface-2: #18181F;
+        --surface-3: #1E1E27;
+        --border: rgba(255,255,255,0.09);
+        --border-subtle: rgba(255,255,255,0.05);
+        --accent: #5080F0;
+        --accent-hover: #6490F8;
+        --accent-dim: rgba(80,128,240,0.12);
+        --accent-text: #ffffff;
+        --text-1: rgba(255,255,255,0.92);
+        --text-2: rgba(255,255,255,0.60);
+        --text-3: rgba(255,255,255,0.35);
+        --success: #2DD4BF;
+        --error: #F87171;
+        --card-border: rgba(255,255,255,0.07);
+        --card-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        --input-bg: #0F0F15;
+        --divider: rgba(255,255,255,0.07);
+        --sans: system-ui, -apple-system, 'Yu Gothic UI', 'Segoe UI', 'Hiragino Sans', sans-serif;
+        color-scheme: dark;
+      }
+    }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     body {
-      font-family: 'Yu Gothic UI', 'Segoe UI', system-ui, sans-serif;
-      background: #0d0d16;
-      color: #f2f2ff;
+      font-family: var(--sans);
+      font-weight: 400;
+      font-size: 13.5px;
+      line-height: 1.65;
+      background: var(--bg);
+      color: var(--text-1);
       height: 100vh;
+      overflow-y: auto;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    .setup-container {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 20px 28px 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .setup-topbar {
+      display: flex;
+      justify-content: flex-end;
+      margin-bottom: -4px;
+    }
+
+    .lang-select {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-2);
+      padding: 5px 28px 5px 10px;
+      font-size: 12px;
+      font-family: var(--sans);
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A56E8' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 8px center;
+    }
+
+    .setup-header {
       display: flex;
       align-items: center;
-      justify-content: center;
-      padding: 24px;
+      gap: 14px;
     }
 
-    .card {
-      width: 100%; max-width: 420px;
-      display: flex; flex-direction: column; gap: 18px;
-    }
-
-    /* Logo row */
-    .logo-row {
-      display: flex; align-items: center; gap: 14px;
-    }
     .logo-badge {
-      width: 50px; height: 50px;
-      background: linear-gradient(135deg, #3a58ee, #607aff);
+      width: 48px; height: 48px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-hover));
       border-radius: 14px;
       display: flex; align-items: center; justify-content: center;
-      font-size: 26px;
-      box-shadow: 0 4px 18px rgba(60, 90, 240, 0.45);
+      font-size: 24px;
+      box-shadow: 0 4px 16px rgba(26,86,232,0.3);
       flex-shrink: 0;
     }
-    .logo-text h1 { font-size: 20px; font-weight: 700; color: #f2f2ff; }
-    .logo-text p { font-size: 12px; color: #525a80; margin-top: 3px; }
 
-    .divider { height: 1px; background: #1a1a2c; }
-
-    /* Field */
-    .field-label {
-      display: block; font-size: 12px; font-weight: 600;
-      color: #5868a0; margin-bottom: 8px; letter-spacing: 0.02em;
+    .setup-header h1 {
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--text-1);
     }
 
-    /* Input */
-    input[type="password"], input[type="text"] {
-      width: 100%;
-      background: #10102a; border: 1px solid #202048;
-      border-radius: 8px; color: #e8e8ff;
-      padding: 12px 14px; font-size: 13px;
-      font-family: 'Consolas', monospace; letter-spacing: 0.03em;
-      transition: border-color 0.15s;
+    .setup-header p {
+      font-size: 11.5px;
+      color: var(--text-3);
+      margin-top: 2px;
+      font-weight: 300;
     }
-    input:focus { outline: none; border-color: #607aff; background: #141438; }
-    input::placeholder { color: #202048; }
 
-    /* Select */
-    select {
-      width: 100%;
-      background: #10102a; border: 1px solid #202048;
-      border-radius: 8px; color: #dde0ff;
-      padding: 11px 14px; font-size: 13px; font-family: inherit;
+    .divider {
+      height: 1px;
+      background: var(--divider);
+    }
+
+    .setting-card {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: 14px;
+      padding: 18px 20px;
+      box-shadow: var(--card-shadow);
+    }
+
+    .setting-card-label {
+      font-size: 9.5px; font-weight: 500; text-transform: uppercase;
+      letter-spacing: 0.12em; color: var(--text-3); margin-bottom: 14px;
+    }
+
+    .input-row { display: flex; gap: 8px; align-items: center; }
+
+    .setting-input {
+      flex: 1; background: var(--input-bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-1); padding: 8px 12px;
+      font-size: 13px; font-weight: 400; font-family: var(--sans);
+      transition: border-color 0.2s;
+    }
+    .setting-input.mono { font-family: 'Consolas', monospace; letter-spacing: 0.02em; font-size: 12px; }
+    .setting-input:focus { outline: none; border-color: var(--accent); }
+    .setting-input::placeholder { color: var(--text-3); }
+
+    .setting-select {
+      width: 100%; background: var(--input-bg);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text-1); padding: 8px 12px;
+      font-size: 13px; font-weight: 400; font-family: var(--sans);
       cursor: pointer; appearance: none;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='7' viewBox='0 0 12 7'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23607aff' stroke-width='1.8' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
-      background-repeat: no-repeat;
-      background-position: right 14px center;
-      padding-right: 36px;
-      transition: border-color 0.15s;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%231A56E8' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px;
     }
-    select:focus { outline: none; border-color: #607aff; }
-    select option { background: #1a1a38; }
+    .setting-select:focus { outline: none; border-color: var(--accent); }
+    .setting-select option { background: var(--surface); }
 
-    .hint-text {
-      font-size: 11.5px; color: #3c4468;
-      line-height: 1.65; margin-top: 7px;
+    .setting-status { font-size: 11.5px; margin-top: 8px; min-height: 16px; color: var(--success); font-weight: 400; }
+    .setting-status.error { color: var(--error); }
+
+    .setting-hint { font-size: 11px; color: var(--text-3); font-weight: 300; margin-top: 7px; line-height: 1.75; }
+    .setting-hint a { color: var(--accent); text-decoration: none; }
+    .setting-hint a:hover { text-decoration: underline; }
+
+    .provider-picker { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin-bottom: 14px; }
+    .provider-btn {
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+      padding: 8px 4px; border-radius: 10px;
+      border: 1px solid var(--border); background: var(--surface-2);
+      cursor: pointer; font-size: 10.5px; font-family: var(--sans); font-weight: 400;
+      color: var(--text-2); text-align: center; transition: all 0.15s; line-height: 1.3;
     }
-    .hint-text a { color: #6080ff; text-decoration: none; }
-    .hint-text a:hover { text-decoration: underline; }
+    .provider-btn:hover { border-color: var(--text-3); color: var(--text-1); }
+    .provider-btn.active { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); font-weight: 500; }
+    .provider-icon { font-size: 16px; display: flex; align-items: center; justify-content: center; height: 28px; }
+    .provider-section { animation: fadeIn 0.15s ease; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(3px); } to { opacity: 1; transform: none; } }
 
-    /* Status */
-    .status {
-      font-size: 12.5px; padding: 10px 14px;
-      border-radius: 8px; display: none; line-height: 1.5;
-    }
-    .status.error  { background: #1e0c0c; color: #ff7272; border: 1px solid #381414; display: block; }
-    .status.success{ background: #0c1e14; color: #38e888; border: 1px solid #143824; display: block; }
-    .status.loading{ background: #10102a; color: #6878c0; border: 1px solid #1c1c48; display: block; }
-
-    /* Primary button */
     .btn-primary {
-      width: 100%; padding: 13px;
-      background: #607aff; color: #fff; border: none;
-      border-radius: 9px; font-size: 14px; font-weight: 600;
-      font-family: inherit; cursor: pointer; transition: all 0.15s;
-      box-shadow: 0 2px 14px rgba(96, 122, 255, 0.4);
+      padding: 7px 18px; border-radius: 99px; border: none;
+      background: var(--text-1); color: #fff;
+      font-size: 12.5px; font-family: var(--sans); font-weight: 400;
+      cursor: pointer; transition: all 0.2s; letter-spacing: 0.01em;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+      white-space: nowrap;
     }
-    .btn-primary:hover:not(:disabled) {
-      background: #506aea;
-      box-shadow: 0 4px 20px rgba(96, 122, 255, 0.55);
-    }
-    .btn-primary:active:not(:disabled) { transform: scale(0.99); }
-    .btn-primary:disabled { opacity: 0.38; cursor: default; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent); box-shadow: 0 4px 18px rgba(26,86,232,0.3); }
+    .btn-primary:active:not(:disabled) { transform: scale(0.97); }
+    .btn-primary:disabled { opacity: 0.35; cursor: default; }
 
-    .skip-link {
-      text-align: center; font-size: 12px;
-      color: #2e2e54; cursor: pointer; transition: color 0.15s;
+    .setup-help {
+      text-align: center;
+      margin-top: 2px;
     }
-    .skip-link:hover { color: #5868a0; }
+    .setup-help a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 12.5px;
+      font-weight: 400;
+      transition: opacity 0.15s;
+    }
+    .setup-help a:hover { text-decoration: underline; }
+
+    .setup-skip {
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-3);
+      cursor: pointer;
+      transition: color 0.15s;
+      padding: 4px 0 8px;
+    }
+    .setup-skip:hover { color: var(--text-2); }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div class="logo-row">
+  <div class="setup-container">
+
+    <!-- Top bar: language selector (right-aligned) -->
+    <div class="setup-topbar">
+      <select id="setup-lang" class="lang-select">
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+        <option value="it">Italiano</option>
+        <option value="de">Deutsch</option>
+        <option value="fr">Français</option>
+        <option value="zh">中文</option>
+      </select>
+    </div>
+
+    <!-- Logo Header -->
+    <div class="setup-header">
       <div class="logo-badge">🧠</div>
       <div class="logo-text">
         <h1>ThreadKeeper</h1>
@@ -127,27 +280,114 @@
 
     <div class="divider"></div>
 
-    <!-- API Key -->
-    <div>
-      <span class="field-label" data-i18n="setup_api_label">🔑 Google AI Studio API キー</span>
-      <input
-        type="password"
-        id="api-key"
-        placeholder="AIzaSy..."
-        autocomplete="off"
-        spellcheck="false"
-      />
-      <p class="hint-text">
-        キー取得:
-        <a href="#" id="link-aistudio">aistudio.google.com/apikey</a>
-        を開いて「Create API key」をクリック
-      </p>
+    <!-- AI Engine Card -->
+    <div class="setting-card">
+      <div class="setting-card-label" data-i18n="settings_ai_engine">AI エンジン設定</div>
+
+      <!-- Provider Picker: 4 buttons with SVG icons -->
+      <div class="provider-picker" id="provider-picker">
+        <button class="provider-btn active" data-provider="gemini">
+          <span class="provider-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 2C12 7.52 7.52 12 2 12c5.52 0 10 4.48 10 10 0-5.52 4.48-10 10-10-5.52 0-10-4.48-10-10z" fill="#4285F4"/></svg></span>
+          <span>Google<br>Gemini</span>
+        </button>
+        <button class="provider-btn" data-provider="openai">
+          <span class="provider-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M22.2 8.7a5.9 5.9 0 00-.5-4.9A6 6 0 0015.3 1a5.9 5.9 0 00-4.5 2.1A5.9 5.9 0 006.5 2 6 6 0 001.8 5.5a5.9 5.9 0 00.7 6.8 5.9 5.9 0 00.5 4.9A6 6 0 009.4 20a5.9 5.9 0 003.8-1.1 5.9 5.9 0 004.3 1.1A6 6 0 0022.2 16.5a5.9 5.9 0 00-.7-6.8z" fill="#10A37F" stroke="#10A37F" stroke-width=".5"/></svg></span>
+          <span>Open<br>AI</span>
+        </button>
+        <button class="provider-btn" data-provider="anthropic">
+          <span class="provider-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M13.6 3H16.4L22 21H19L17.6 16.5H10.4L9 21H6L11.6 3H13.6ZM14 6.5L11.4 14.5H16.6L14 6.5Z" fill="#D97706"/></svg></span>
+          <span>Anthro<br>pic</span>
+        </button>
+        <button class="provider-btn" data-provider="ollama">
+          <span class="provider-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="2" y="3" width="20" height="18" rx="3" stroke="#7C3AED" stroke-width="1.8" fill="none"/><path d="M6 15l3-3-3-3" stroke="#7C3AED" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 15h5" stroke="#7C3AED" stroke-width="1.8" stroke-linecap="round"/></svg></span>
+          <span data-i18n="settings_ollama_local">ローカル</span><br><span>(Ollama)</span>
+        </button>
+      </div>
+
+      <!-- Gemini Section -->
+      <div class="provider-section" id="section-gemini">
+        <div class="input-row">
+          <input class="setting-input mono" type="password" id="setup-gemini-key" placeholder="AIzaSy..." autocomplete="off" spellcheck="false" />
+          <button class="btn-primary" id="btn-test-gemini" data-i18n="settings_save_test">テスト&保存</button>
+        </div>
+        <select class="setting-select" id="setup-gemini-model" style="margin-top:8px;">
+          <optgroup data-i18n-label="optgroup_free" label="── 無料枠向け（推奨）">
+            <option value="gemini-2.5-flash" data-i18n="model_gemini_flash">Gemini 2.5 Flash — 高速・推奨</option>
+            <option value="gemini-2.5-flash-lite" data-i18n="model_gemini_lite">Gemini 2.5 Flash Lite — 最速・軽量</option>
+            <option value="gemini-2.5-flash-preview-05-20" data-i18n="model_gemini_latest">Gemini Flash Latest — 常に最新</option>
+          </optgroup>
+          <optgroup data-i18n-label="optgroup_paid" label="── 高精度（有料枠向け）">
+            <option value="gemini-2.5-pro" data-i18n="model_gemini_pro">Gemini 2.5 Pro</option>
+          </optgroup>
+        </select>
+        <div class="setting-hint" data-i18n-html="settings_hint_gemini">APIキーの取得: <a href="#" id="link-gemini">aistudio.google.com/apikey</a></div>
+        <div class="setting-status" id="status-gemini"></div>
+      </div>
+
+      <!-- OpenAI Section (hidden by default) -->
+      <div class="provider-section" id="section-openai" style="display:none;">
+        <div class="input-row">
+          <input class="setting-input mono" type="password" id="setup-openai-key" placeholder="sk-..." autocomplete="off" spellcheck="false" />
+          <button class="btn-primary" id="btn-test-openai" data-i18n="settings_save_test">テスト&保存</button>
+        </div>
+        <select class="setting-select" id="setup-openai-model" style="margin-top:8px;">
+          <optgroup data-i18n-label="optgroup_low_cost" label="── 低コスト（推奨）">
+            <option value="gpt-4o-mini" data-i18n="model_gpt4o_mini">GPT-4o mini — 高速・安価</option>
+          </optgroup>
+          <optgroup data-i18n-label="optgroup_high_perf" label="── 高性能">
+            <option value="gpt-4o" data-i18n="model_gpt4o">GPT-4o</option>
+            <option value="gpt-4.1-mini" data-i18n="model_gpt4_1_mini">GPT-4.1 mini</option>
+            <option value="gpt-4.1-nano" data-i18n="model_gpt4_1_nano">GPT-4.1 nano</option>
+            <option value="gpt-4.1" data-i18n="model_gpt4_1">GPT-4.1</option>
+            <option value="o4-mini" data-i18n="model_o4_mini">o4-mini（推論特化）</option>
+          </optgroup>
+        </select>
+        <div class="setting-hint" data-i18n-html="settings_hint_openai">APIキーの取得: <a href="#" id="link-openai">platform.openai.com/api-keys</a></div>
+        <div class="setting-status" id="status-openai"></div>
+      </div>
+
+      <!-- Anthropic Section (hidden by default) -->
+      <div class="provider-section" id="section-anthropic" style="display:none;">
+        <div class="input-row">
+          <input class="setting-input mono" type="password" id="setup-anthropic-key" placeholder="sk-ant-..." autocomplete="off" spellcheck="false" />
+          <button class="btn-primary" id="btn-test-anthropic" data-i18n="settings_save_test">テスト&保存</button>
+        </div>
+        <select class="setting-select" id="setup-anthropic-model" style="margin-top:8px;">
+          <optgroup data-i18n-label="optgroup_low_cost" label="── 低コスト（推奨）">
+            <option value="claude-3-5-haiku-latest" data-i18n="model_haiku">Claude 3.5 Haiku — 高速・安価</option>
+          </optgroup>
+          <optgroup data-i18n-label="optgroup_high_perf" label="── 高性能">
+            <option value="claude-sonnet-4-20250514" data-i18n="model_sonnet35">Claude 3.5 Sonnet</option>
+            <option value="claude-3-7-sonnet-latest" data-i18n="model_sonnet37">Claude 3.7 Sonnet（拡張思考対応）</option>
+            <option value="claude-opus-4-5" data-i18n="model_opus">Claude Opus 4.5</option>
+          </optgroup>
+        </select>
+        <div class="setting-hint" data-i18n-html="settings_hint_anthropic">APIキーの取得: <a href="#" id="link-anthropic">console.anthropic.com</a></div>
+        <div class="setting-status" id="status-anthropic"></div>
+      </div>
+
+      <!-- Ollama Section (hidden by default) -->
+      <div class="provider-section" id="section-ollama" style="display:none;">
+        <div style="margin-bottom:8px;">
+          <div style="font-size:11px; color:var(--text-3); margin-bottom:4px; font-weight:300;" data-i18n="settings_ollama_url">サーバーURL</div>
+          <input class="setting-input" id="setup-ollama-url" placeholder="http://localhost:11434" autocomplete="off" spellcheck="false" />
+        </div>
+        <div style="margin-bottom:8px;">
+          <div style="font-size:11px; color:var(--text-3); margin-bottom:4px; font-weight:300;" data-i18n="settings_model_name">モデル名</div>
+          <input class="setting-input" id="setup-ollama-model" data-i18n-placeholder="settings_model_placeholder" placeholder="例: llama3.2 / qwen2.5 / gemma3 / phi4" autocomplete="off" spellcheck="false" />
+        </div>
+        <div style="margin-top:4px;">
+          <button class="btn-primary" id="btn-test-ollama" data-i18n="settings_save_test">接続テスト&保存</button>
+        </div>
+        <div class="setting-hint" data-i18n-html="settings_hint_ollama">インストール: <a href="#" id="link-ollama">ollama.com</a></div>
+        <div class="setting-status" id="status-ollama"></div>
+      </div>
     </div>
 
-    <!-- Browser selection -->
-    <div>
-      <span class="field-label" data-i18n="setup_browser_label">🌐 使用するブラウザ</span>
-      <select id="browser-select">
+    <!-- Browser Selection Card -->
+    <div class="setting-card">
+      <div class="setting-card-label" data-i18n="setup_browser_label">ブラウザ</div>
+      <select class="setting-select" id="setup-browser">
         <option value="edge">Microsoft Edge</option>
         <option value="chrome">Google Chrome</option>
         <option value="firefox">Mozilla Firefox</option>
@@ -155,10 +395,13 @@
       </select>
     </div>
 
-    <div class="status" id="status"></div>
+    <!-- Help Link -->
+    <div class="setup-help">
+      <a href="#" id="link-help" data-i18n="setup_help_link">分かんない方はこちら →</a>
+    </div>
 
-    <button class="btn-primary" id="btn-save" data-i18n="setup_save">接続テスト &amp; 保存</button>
-    <div class="skip-link" id="btn-skip" data-i18n="setup_skip">スキップ（後で設定する）</div>
+    <!-- Skip -->
+    <div class="setup-skip" id="btn-skip" data-i18n="setup_skip">スキップ（後で設定する）</div>
   </div>
 
   <script src="setup.js"></script>

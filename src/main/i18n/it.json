@@ -262,5 +262,6 @@
   "update_checking": "Verifica aggiornamenti in corso\u2026",
   "tray_check_update": "\ud83d\udd04 Verifica aggiornamenti",
   "settings_auto_update": "Verifica aggiornamenti all'avvio",
-  "settings_auto_update_desc": "Ti avvisa quando \u00e8 disponibile una nuova versione"
+  "settings_auto_update_desc": "Ti avvisa quando \u00e8 disponibile una nuova versione",
+  "setup_help_link": "Hai bisogno di aiuto? Clicca qui \u2192"
 }
