@@ -249,5 +249,18 @@
   "ai_section_windows": "Open applications",
   "ai_section_files": "Recent files",
   "ai_section_clipboard": "Clipboard content (first 200 chars)",
-  "ai_joiner": ", "
+  "ai_joiner": ", ",
+
+  "update_available": "Update Available",
+  "update_body": "v{version} is available.\n\n{notes}",
+  "update_download": "Download",
+  "update_skip": "Skip This Version",
+  "update_later": "Later",
+  "update_latest": "You're Up to Date",
+  "update_latest_body": "You are running the latest version (v{version}).",
+  "update_check_error": "Failed to check for updates",
+  "update_checking": "Checking for updates\u2026",
+  "tray_check_update": "\ud83d\udd04 Check for Updates",
+  "settings_auto_update": "Check for updates on startup",
+  "settings_auto_update_desc": "Notifies you when a new version is available"
 }

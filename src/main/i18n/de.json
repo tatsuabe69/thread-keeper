@@ -249,5 +249,18 @@
   "ai_section_windows": "Geöffnete Anwendungen",
   "ai_section_files": "Letzte Dateien",
   "ai_section_clipboard": "Inhalt der Zwischenablage (erste 200 Zeichen)",
-  "ai_joiner": ", "
+  "ai_joiner": ", ",
+
+  "update_available": "Update verf\u00fcgbar",
+  "update_body": "v{version} ist verf\u00fcgbar.\n\n{notes}",
+  "update_download": "Herunterladen",
+  "update_skip": "Diese Version \u00fcberspringen",
+  "update_later": "Sp\u00e4ter",
+  "update_latest": "Sie sind auf dem neuesten Stand",
+  "update_latest_body": "Sie verwenden die neueste Version (v{version}).",
+  "update_check_error": "Update-Pr\u00fcfung fehlgeschlagen",
+  "update_checking": "Suche nach Updates\u2026",
+  "tray_check_update": "\ud83d\udd04 Nach Updates suchen",
+  "settings_auto_update": "Beim Start nach Updates suchen",
+  "settings_auto_update_desc": "Benachrichtigt Sie, wenn eine neue Version verf\u00fcgbar ist"
 }

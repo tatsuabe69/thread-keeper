@@ -249,5 +249,18 @@
   "ai_section_windows": "Applications ouvertes",
   "ai_section_files": "Fichiers récents",
   "ai_section_clipboard": "Contenu du presse-papiers (200 premiers caractères)",
-  "ai_joiner": ", "
+  "ai_joiner": ", ",
+
+  "update_available": "Mise \u00e0 jour disponible",
+  "update_body": "v{version} est disponible.\n\n{notes}",
+  "update_download": "T\u00e9l\u00e9charger",
+  "update_skip": "Ignorer cette version",
+  "update_later": "Plus tard",
+  "update_latest": "Vous \u00eates \u00e0 jour",
+  "update_latest_body": "Vous utilisez la derni\u00e8re version (v{version}).",
+  "update_check_error": "Impossible de v\u00e9rifier les mises \u00e0 jour",
+  "update_checking": "V\u00e9rification des mises \u00e0 jour\u2026",
+  "tray_check_update": "\ud83d\udd04 V\u00e9rifier les mises \u00e0 jour",
+  "settings_auto_update": "V\u00e9rifier les mises \u00e0 jour au d\u00e9marrage",
+  "settings_auto_update_desc": "Vous avertit lorsqu'une nouvelle version est disponible"
 }

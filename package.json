@@ -2,6 +2,10 @@
   "name": "thread-keeper",
   "version": "0.2.0",
   "description": "作業文脈を保存・復元するデスクトップアプリ",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tatsuabe69/thread-keeper.git"
+  },
   "main": "dist/main/main.js",
   "scripts": {
     "dev": "concurrently -k -p \"[{name}]\" -n \"TSC,ELECTRON\" -c \"cyan,green\" \"npm run build:watch\" \"npm run start:electron\"",

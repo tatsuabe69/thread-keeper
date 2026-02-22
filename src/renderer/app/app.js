@@ -821,6 +821,16 @@ function initSettings() {
     config.openAtLogin = e.target.checked;
   });
 
+  // ── Auto-update toggle ──────────────────────────────────────────────────
+  const autoUpdate = document.getElementById('setting-auto-update');
+  if (autoUpdate) {
+    autoUpdate.checked = config.autoCheckUpdates !== false;
+    autoUpdate.addEventListener('change', async e => {
+      await window.electronAPI.saveConfig({ autoCheckUpdates: e.target.checked });
+      config.autoCheckUpdates = e.target.checked;
+    });
+  }
+
   // ── History range settings ────────────────────────────────────────────────
   const historyMode  = document.getElementById('setting-history-mode');
   const historyRange = document.getElementById('setting-history-range');

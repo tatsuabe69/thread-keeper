@@ -32,6 +32,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   openUrl:            (url: string)               => ipcRenderer.invoke('open-url', url),
   openPath:           (filePath: string)          => ipcRenderer.invoke('open-path', filePath),
   writeClipboard:     (text: string)              => ipcRenderer.invoke('write-clipboard', text),
+  checkForUpdates:    ()                          => ipcRenderer.invoke('check-for-updates'),
 
   // ── On (main → renderer events) ───────────────────────────────────────────
   onNavigate:            (cb: (tab: string) => void)    => { ipcRenderer.on('navigate',              (_e, tab) => cb(tab)); },

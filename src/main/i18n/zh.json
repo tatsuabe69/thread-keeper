@@ -249,5 +249,18 @@
   "ai_section_windows": "打开的应用程序",
   "ai_section_files": "最近使用的文件",
   "ai_section_clipboard": "剪贴板内容（前200字）",
-  "ai_joiner": "、"
+  "ai_joiner": "\u3001",
+
+  "update_available": "\u6709\u53ef\u7528\u66f4\u65b0",
+  "update_body": "v{version} \u5df2\u53d1\u5e03\u3002\n\n{notes}",
+  "update_download": "\u4e0b\u8f7d",
+  "update_skip": "\u8df3\u8fc7\u6b64\u7248\u672c",
+  "update_later": "\u7a0d\u540e",
+  "update_latest": "\u5df2\u662f\u6700\u65b0\u7248\u672c",
+  "update_latest_body": "\u5f53\u524d\u7248\u672c v{version} \u5df2\u662f\u6700\u65b0\u3002",
+  "update_check_error": "\u68c0\u67e5\u66f4\u65b0\u5931\u8d25",
+  "update_checking": "\u6b63\u5728\u68c0\u67e5\u66f4\u65b0\u2026",
+  "tray_check_update": "\ud83d\udd04 \u68c0\u67e5\u66f4\u65b0",
+  "settings_auto_update": "\u542f\u52a8\u65f6\u81ea\u52a8\u68c0\u67e5\u66f4\u65b0",
+  "settings_auto_update_desc": "\u6709\u65b0\u7248\u672c\u53d1\u5e03\u65f6\u901a\u77e5\u60a8"
 }

@@ -249,5 +249,18 @@
   "ai_section_windows": "Applicazioni aperte",
   "ai_section_files": "File recenti",
   "ai_section_clipboard": "Contenuto degli appunti (primi 200 caratteri)",
-  "ai_joiner": ", "
+  "ai_joiner": ", ",
+
+  "update_available": "Aggiornamento disponibile",
+  "update_body": "v{version} \u00e8 disponibile.\n\n{notes}",
+  "update_download": "Scarica",
+  "update_skip": "Salta questa versione",
+  "update_later": "Pi\u00f9 tardi",
+  "update_latest": "Sei aggiornato",
+  "update_latest_body": "Stai utilizzando la versione pi\u00f9 recente (v{version}).",
+  "update_check_error": "Impossibile verificare gli aggiornamenti",
+  "update_checking": "Verifica aggiornamenti in corso\u2026",
+  "tray_check_update": "\ud83d\udd04 Verifica aggiornamenti",
+  "settings_auto_update": "Verifica aggiornamenti all'avvio",
+  "settings_auto_update_desc": "Ti avvisa quando \u00e8 disponibile una nuova versione"
 }

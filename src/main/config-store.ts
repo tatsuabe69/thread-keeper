@@ -63,6 +63,11 @@ export interface AppConfig {
 
   // ── i18n ──
   language: string; // default: 'ja' — see SupportedLang in i18n/index.ts
+
+  // ── Auto-update ──
+  autoCheckUpdates: boolean; // default: true — check for updates on startup
+  lastUpdateCheck: number;   // default: 0 — Unix timestamp of last check
+  skipVersion: string;       // default: '' — version the user chose to skip
 }
 
 const DEFAULTS: AppConfig = {
@@ -87,6 +92,10 @@ const DEFAULTS: AppConfig = {
   clipboardCapture: true,
   // i18n
   language: 'ja',
+  // Auto-update
+  autoCheckUpdates: true,
+  lastUpdateCheck: 0,
+  skipVersion: '',
 };
 
 export function loadConfig(): AppConfig {

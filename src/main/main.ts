@@ -17,6 +17,7 @@ import { loadConfig, saveConfig, isConfigured, migrateFromDotenv } from './confi
 import { startRelayServer } from './session/tab-relay-server';
 import { loadTranslations, clearTranslationCache, getAvailableLanguages, t } from './i18n';
 import { isMac, isWin, getAppDataDir, getDefaultShortcuts, getRecentFilesDir } from './platform';
+import { checkForUpdates } from './updater';
 
 // ─── Single instance ──────────────────────────────────────────────────────────
 const gotTheLock = app.requestSingleInstanceLock();
@@ -195,6 +196,7 @@ function refreshTrayMenu(): void {
     { label: `${t(i18n, 'tray_sessions')}    ${openKey}`,    click: () => openMainWindow('sessions') },
     { type: 'separator' },
     { label: t(i18n, 'tray_settings'), click: () => openMainWindow('settings') },
+    { label: t(i18n, 'tray_check_update'), click: () => checkForUpdates(false) },
     { type: 'separator' },
     { label: t(i18n, 'tray_quit'), click: () => app.exit(0) },
   ]));
@@ -433,6 +435,9 @@ function registerIpc(): void {
     const { clipboard } = await import('electron');
     clipboard.writeText(String(text));
   });
+
+  // ── Update check ──
+  ipcMain.handle('check-for-updates', () => checkForUpdates(false));
 }
 
 // ─── App lifecycle ────────────────────────────────────────────────────────────
@@ -461,6 +466,13 @@ app.whenReady().then(() => {
     openMainWindow('sessions');
   }
   console.log('[TK] Started. Configured:', isConfigured());
+
+  // Auto-update check after 5 seconds
+  setTimeout(() => {
+    checkForUpdates(true).catch(err => {
+      console.warn('[TK] Auto update check failed:', (err as Error).message);
+    });
+  }, 5000);
 });
 
 app.on('window-all-closed', () => { /* tray app — keep alive */ });
