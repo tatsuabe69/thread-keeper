@@ -13,6 +13,7 @@
 import { app, dialog, shell, net, BrowserWindow } from 'electron';
 import { loadConfig, saveConfig } from './config-store';
 import { loadTranslations, t } from './i18n';
+import { isMac } from './platform';
 
 // ── GitHub repo coordinates ──────────────────────────────────────────────────
 const GITHUB_OWNER = 'tatsuabe69';
@@ -21,9 +22,10 @@ const GITHUB_REPO  = 'thread-keeper';
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
 interface ReleaseInfo {
-  version: string;   // e.g. "0.3.0" (tag_name stripped of leading "v")
-  htmlUrl: string;    // release page URL
-  body: string;       // release notes (markdown)
+  version: string;      // e.g. "0.3.0" (tag_name stripped of leading "v")
+  htmlUrl: string;       // release page URL (fallback)
+  downloadUrl: string;   // direct asset download URL for current platform
+  body: string;          // release notes (markdown)
 }
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -65,9 +67,18 @@ function fetchLatestRelease(): Promise<ReleaseInfo> {
         try {
           const data = JSON.parse(body);
           const tagName: string = data.tag_name ?? '';
+          const htmlUrl = data.html_url ?? `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`;
+
+          // Find platform-specific asset (.exe for Windows, .dmg for macOS)
+          const assets: Array<{ name: string; browser_download_url: string }> = data.assets ?? [];
+          const targetExt = isMac ? '.dmg' : '.exe';
+          const asset = assets.find(a => a.name.toLowerCase().endsWith(targetExt));
+          const downloadUrl = asset?.browser_download_url ?? htmlUrl;
+
           resolve({
             version: tagName.replace(/^v/i, ''),
-            htmlUrl: data.html_url ?? `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}/releases`,
+            htmlUrl,
+            downloadUrl,
             body: data.body ?? '',
           });
         } catch (err) {
@@ -112,9 +123,9 @@ async function showUpdateDialog(info: ReleaseInfo): Promise<void> {
   );
 
   if (result.response === 0) {
-    // Download — open release page in browser
+    // Download — open direct download URL (or release page as fallback)
     try {
-      const parsed = new URL(info.htmlUrl);
+      const parsed = new URL(info.downloadUrl);
       if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
         await shell.openExternal(parsed.href);
       }
