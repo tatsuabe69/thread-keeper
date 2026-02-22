@@ -86,8 +86,8 @@ function openMainWindow(tab = 'sessions'): void {
 function openSetupWindow(): void {
   if (setupWindow) { setupWindow.focus(); return; }
   setupWindow = new BrowserWindow({
-    width: 560,
-    height: 660,
+    width: 640,
+    height: 520,
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -100,7 +100,10 @@ function openSetupWindow(): void {
   });
   setupWindow.setMenuBarVisibility(false);
   setupWindow.loadFile(rendererPath('setup', 'index.html'));
-  setupWindow.on('closed', () => { setupWindow = null; });
+  setupWindow.on('closed', () => {
+    setupWindow = null;
+    openMainWindow('sessions');
+  });
 }
 
 // ─── Capture flow ─────────────────────────────────────────────────────────────
@@ -437,6 +440,9 @@ function registerIpc(): void {
     const { clipboard } = await import('electron');
     clipboard.writeText(String(text));
   });
+
+  // ── App version ──
+  ipcMain.handle('get-app-version', () => app.getVersion());
 
   // ── Update check & download ──
   ipcMain.handle('check-for-updates', async () => {

@@ -272,5 +272,24 @@
   "update_download_error": "Download failed: {error}",
   "update_new_version": "v{version} is available",
   "update_skip_version": "Skip this version",
-  "update_preparing": "Preparing to install\u2026"
+  "update_preparing": "Preparing to install\u2026",
+
+  "wizard_welcome_title": "Welcome to ThreadKeeper",
+  "wizard_welcome_desc": "Save and restore your work context. Record your PC state with one touch and pick up where you left off anytime.",
+  "wizard_ai_title": "Set Up AI Engine",
+  "wizard_ai_desc": "AI infers what you were working on. Enter your API key.",
+  "wizard_browser_title": "Choose Your Browser",
+  "wizard_browser_desc": "Select which browser to use when restoring sessions.",
+  "wizard_tutorial_title": "How to Use",
+  "wizard_tutorial_desc": "Learn three key features and you're ready.",
+  "wizard_tutorial_capture_title": "Capture with {key}",
+  "wizard_tutorial_capture_desc": "AI infers and saves your current work context",
+  "wizard_tutorial_tray_title": "Tray Icon",
+  "wizard_tutorial_tray_desc": "Lives in taskbar. Double-click to open",
+  "wizard_tutorial_restore_title": "Session Restore",
+  "wizard_tutorial_restore_desc": "Restore any saved session with one click",
+  "wizard_start": "Let's Go",
+  "wizard_next": "Next",
+  "wizard_back": "Back",
+  "wizard_finish": "Done"
 }

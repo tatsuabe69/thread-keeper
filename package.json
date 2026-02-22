@@ -1,6 +1,6 @@
 {
   "name": "thread-keeper",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "作業文脈を保存・復元するデスクトップアプリ",
   "author": "tatsuabe69",
   "repository": {

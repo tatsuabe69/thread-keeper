@@ -272,5 +272,24 @@
   "update_download_error": "\u4e0b\u8f7d\u5931\u8d25\uff1a{error}",
   "update_new_version": "v{version} \u53ef\u7528",
   "update_skip_version": "\u8df3\u8fc7\u6b64\u7248\u672c",
-  "update_preparing": "\u6b63\u5728\u51c6\u5907\u5b89\u88c5\u2026"
+  "update_preparing": "\u6b63\u5728\u51c6\u5907\u5b89\u88c5\u2026",
+
+  "wizard_welcome_title": "\u6b22\u8fce\u4f7f\u7528 ThreadKeeper",
+  "wizard_welcome_desc": "\u4fdd\u5b58\u548c\u6062\u590d\u5de5\u4f5c\u4e0a\u4e0b\u6587\u3002\u4e00\u952e\u8bb0\u5f55\u7535\u8111\u72b6\u6001\uff0c\u968f\u65f6\u4ece\u4e0a\u6b21\u79bb\u5f00\u7684\u5730\u65b9\u7ee7\u7eed\u3002",
+  "wizard_ai_title": "\u8bbe\u7f6eAI\u5f15\u64ce",
+  "wizard_ai_desc": "AI\u81ea\u52a8\u63a8\u6d4b\u60a8\u7684\u5de5\u4f5c\u5185\u5bb9\u3002\u8bf7\u8f93\u5165API\u5bc6\u94a5\u3002",
+  "wizard_browser_title": "\u9009\u62e9\u6d4f\u89c8\u5668",
+  "wizard_browser_desc": "\u9009\u62e9\u6062\u590d\u4f1a\u8bdd\u65f6\u6253\u5f00URL\u7684\u6d4f\u89c8\u5668\u3002",
+  "wizard_tutorial_title": "\u4f7f\u7528\u65b9\u6cd5",
+  "wizard_tutorial_desc": "\u5b66\u4f1a\u4e09\u4e2a\u57fa\u672c\u64cd\u4f5c\u5c31\u51c6\u5907\u5c31\u7eea\u3002",
+  "wizard_tutorial_capture_title": "\u4f7f\u7528 {key} \u6355\u83b7",
+  "wizard_tutorial_capture_desc": "AI\u63a8\u6d4b\u5e76\u4fdd\u5b58\u5f53\u524d\u5de5\u4f5c\u4e0a\u4e0b\u6587",
+  "wizard_tutorial_tray_title": "\u6258\u76d8\u56fe\u6807",
+  "wizard_tutorial_tray_desc": "\u5e38\u9a7b\u4efb\u52a1\u680f\u3002\u53cc\u51fb\u6253\u5f00",
+  "wizard_tutorial_restore_title": "\u4f1a\u8bdd\u6062\u590d",
+  "wizard_tutorial_restore_desc": "\u4e00\u952e\u6062\u590d\u4efb\u4f55\u5df2\u4fdd\u5b58\u7684\u4f1a\u8bdd",
+  "wizard_start": "\u5f00\u59cb\u5427",
+  "wizard_next": "\u4e0b\u4e00\u6b65",
+  "wizard_back": "\u8fd4\u56de",
+  "wizard_finish": "\u5b8c\u6210"
 }

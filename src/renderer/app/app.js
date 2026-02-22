@@ -1340,6 +1340,13 @@ async function init() {
   isCollecting = (captureState === 'collecting');
   const initialTab = loadedInitialTab;
 
+  // Dynamic version display
+  try {
+    const ver = await window.electronAPI.getAppVersion();
+    const verEl = document.getElementById('logo-ver');
+    if (verEl && ver) verEl.textContent = 'v' + ver;
+  } catch { /* ignore */ }
+
   applyTheme(config.theme || 'system');
   applyTranslations(); // translate static HTML elements
 

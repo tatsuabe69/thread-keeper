@@ -272,5 +272,24 @@
   "update_download_error": "ダウンロード失敗: {error}",
   "update_new_version": "v{version} が利用可能です",
   "update_skip_version": "このバージョンをスキップ",
-  "update_preparing": "インストールの準備中…"
+  "update_preparing": "インストールの準備中…",
+
+  "wizard_welcome_title": "ThreadKeeper へようこそ",
+  "wizard_welcome_desc": "作業文脈を保存・復元するアプリです。PCの状態をワンタッチで記録し、いつでも続きから始められます。",
+  "wizard_ai_title": "AIエンジンを設定",
+  "wizard_ai_desc": "AIが作業内容を自動で推測します。APIキーを入力してください。",
+  "wizard_browser_title": "ブラウザを選択",
+  "wizard_browser_desc": "セッション復元時にURLを開くブラウザを選んでください。",
+  "wizard_tutorial_title": "使い方",
+  "wizard_tutorial_desc": "3つの基本操作を覚えれば準備完了です。",
+  "wizard_tutorial_capture_title": "{key} でキャプチャ",
+  "wizard_tutorial_capture_desc": "今の作業状態をAIが推測して保存します",
+  "wizard_tutorial_tray_title": "トレイアイコン",
+  "wizard_tutorial_tray_desc": "タスクバーに常駐。ダブルクリックで開きます",
+  "wizard_tutorial_restore_title": "セッション復元",
+  "wizard_tutorial_restore_desc": "保存したセッションをワンクリックで復元",
+  "wizard_start": "始めましょう",
+  "wizard_next": "次へ",
+  "wizard_back": "戻る",
+  "wizard_finish": "完了"
 }

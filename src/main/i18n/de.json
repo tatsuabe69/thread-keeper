@@ -272,5 +272,24 @@
   "update_download_error": "Download fehlgeschlagen: {error}",
   "update_new_version": "v{version} ist verf\u00fcgbar",
   "update_skip_version": "Diese Version \u00fcberspringen",
-  "update_preparing": "Installation wird vorbereitet\u2026"
+  "update_preparing": "Installation wird vorbereitet\u2026",
+
+  "wizard_welcome_title": "Willkommen bei ThreadKeeper",
+  "wizard_welcome_desc": "Speichern und stellen Sie Ihren Arbeitskontext wieder her. Zeichnen Sie den PC-Status mit einem Klick auf und setzen Sie jederzeit fort.",
+  "wizard_ai_title": "KI-Engine einrichten",
+  "wizard_ai_desc": "Die KI erkennt, woran Sie gearbeitet haben. Geben Sie Ihren API-Schl\u00fcssel ein.",
+  "wizard_browser_title": "Browser w\u00e4hlen",
+  "wizard_browser_desc": "W\u00e4hlen Sie den Browser f\u00fcr die Sitzungswiederherstellung.",
+  "wizard_tutorial_title": "Anleitung",
+  "wizard_tutorial_desc": "Lernen Sie drei Grundfunktionen und los geht's.",
+  "wizard_tutorial_capture_title": "Erfassen mit {key}",
+  "wizard_tutorial_capture_desc": "KI erkennt und speichert Ihren aktuellen Arbeitskontext",
+  "wizard_tutorial_tray_title": "Tray-Symbol",
+  "wizard_tutorial_tray_desc": "Bleibt in der Taskleiste. Doppelklick zum \u00d6ffnen",
+  "wizard_tutorial_restore_title": "Sitzung wiederherstellen",
+  "wizard_tutorial_restore_desc": "Jede gespeicherte Sitzung mit einem Klick wiederherstellen",
+  "wizard_start": "Los geht's",
+  "wizard_next": "Weiter",
+  "wizard_back": "Zur\u00fcck",
+  "wizard_finish": "Fertig"
 }

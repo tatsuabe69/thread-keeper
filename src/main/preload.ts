@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getAvailableLanguages: ()                          => ipcRenderer.invoke('get-available-languages'),
 
   // ── Invoke (request-response) ──────────────────────────────────────────────
+  getAppVersion:      ()                          => ipcRenderer.invoke('get-app-version'),
   getInitialTab:      ()                          => ipcRenderer.invoke('get-initial-tab'),
   getPendingSession:  ()                          => ipcRenderer.invoke('get-pending-session'),
   getCaptureState:    ()                          => ipcRenderer.invoke('get-capture-state'),

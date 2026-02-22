@@ -272,5 +272,24 @@
   "update_download_error": "Download non riuscito: {error}",
   "update_new_version": "v{version} \u00e8 disponibile",
   "update_skip_version": "Salta questa versione",
-  "update_preparing": "Preparazione dell'installazione\u2026"
+  "update_preparing": "Preparazione dell'installazione\u2026",
+
+  "wizard_welcome_title": "Benvenuto in ThreadKeeper",
+  "wizard_welcome_desc": "Salva e ripristina il contesto di lavoro. Registra lo stato del PC con un tocco e riprendi da dove avevi lasciato.",
+  "wizard_ai_title": "Configura motore AI",
+  "wizard_ai_desc": "L'IA deduce su cosa stavi lavorando. Inserisci la tua chiave API.",
+  "wizard_browser_title": "Scegli il browser",
+  "wizard_browser_desc": "Seleziona quale browser utilizzare per il ripristino delle sessioni.",
+  "wizard_tutorial_title": "Come usare",
+  "wizard_tutorial_desc": "Impara tre funzionalit\u00e0 chiave e sei pronto.",
+  "wizard_tutorial_capture_title": "Cattura con {key}",
+  "wizard_tutorial_capture_desc": "L'IA deduce e salva il contesto di lavoro attuale",
+  "wizard_tutorial_tray_title": "Icona nella barra",
+  "wizard_tutorial_tray_desc": "Rimane nella barra delle applicazioni. Doppio clic per aprire",
+  "wizard_tutorial_restore_title": "Ripristina sessione",
+  "wizard_tutorial_restore_desc": "Ripristina qualsiasi sessione salvata con un clic",
+  "wizard_start": "Iniziamo",
+  "wizard_next": "Avanti",
+  "wizard_back": "Indietro",
+  "wizard_finish": "Fine"
 }

@@ -272,5 +272,24 @@
   "update_download_error": "\u00c9chec du t\u00e9l\u00e9chargement : {error}",
   "update_new_version": "v{version} est disponible",
   "update_skip_version": "Ignorer cette version",
-  "update_preparing": "Pr\u00e9paration de l'installation\u2026"
+  "update_preparing": "Pr\u00e9paration de l'installation\u2026",
+
+  "wizard_welcome_title": "Bienvenue dans ThreadKeeper",
+  "wizard_welcome_desc": "Sauvegardez et restaurez votre contexte de travail. Enregistrez l'\u00e9tat de votre PC en un clic et reprenez o\u00f9 vous en \u00e9tiez.",
+  "wizard_ai_title": "Configurer le moteur IA",
+  "wizard_ai_desc": "L'IA d\u00e9duit ce sur quoi vous travailliez. Entrez votre cl\u00e9 API.",
+  "wizard_browser_title": "Choisir le navigateur",
+  "wizard_browser_desc": "S\u00e9lectionnez le navigateur \u00e0 utiliser pour la restauration des sessions.",
+  "wizard_tutorial_title": "Mode d'emploi",
+  "wizard_tutorial_desc": "Apprenez trois fonctions cl\u00e9s et vous \u00eates pr\u00eat.",
+  "wizard_tutorial_capture_title": "Capturer avec {key}",
+  "wizard_tutorial_capture_desc": "L'IA d\u00e9duit et sauvegarde votre contexte de travail actuel",
+  "wizard_tutorial_tray_title": "Ic\u00f4ne de la barre",
+  "wizard_tutorial_tray_desc": "R\u00e9side dans la barre des t\u00e2ches. Double-cliquez pour ouvrir",
+  "wizard_tutorial_restore_title": "Restauration de session",
+  "wizard_tutorial_restore_desc": "Restaurez n'importe quelle session sauvegard\u00e9e en un clic",
+  "wizard_start": "C'est parti",
+  "wizard_next": "Suivant",
+  "wizard_back": "Retour",
+  "wizard_finish": "Termin\u00e9"
 }
