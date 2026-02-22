@@ -1,16 +1,22 @@
 /**
  * updater.ts
  *
- * Lightweight update checker using the GitHub Releases API.
- * On launch (after 5 s delay) and via a tray menu item,
- * fetches the latest release tag from GitHub and compares
- * it with the local package version.
+ * Lightweight update checker + in-app download & install using the
+ * GitHub Releases API.
  *
- * If a newer version exists, shows a native dialog with
- * three options: Download (opens browser), Skip This Version, Later.
+ * Flow:
+ *   1. checkForUpdates() fetches latest release tag from GitHub
+ *   2. If newer, sends 'update-available' event to renderer (or native dialog as fallback)
+ *   3. Renderer shows banner; user clicks "Download"
+ *   4. downloadUpdate() streams asset to temp dir with progress events
+ *   5. User clicks "Install & Restart"
+ *   6. installUpdate() launches installer via shell.openPath() then quits
  */
 
+import * as path from 'path';
+import * as fs from 'fs';
 import { app, dialog, shell, net, BrowserWindow } from 'electron';
+import type { ClientRequest } from 'electron';
 import { loadConfig, saveConfig } from './config-store';
 import { loadTranslations, t } from './i18n';
 import { isMac } from './platform';
@@ -21,12 +27,17 @@ const GITHUB_REPO  = 'thread-keeper';
 
 const CHECK_INTERVAL_MS = 6 * 60 * 60 * 1000; // 6 hours
 
-interface ReleaseInfo {
+export interface ReleaseInfo {
   version: string;      // e.g. "0.3.0" (tag_name stripped of leading "v")
   htmlUrl: string;       // release page URL (fallback)
   downloadUrl: string;   // direct asset download URL for current platform
   body: string;          // release notes (markdown)
 }
+
+// ── Download state ───────────────────────────────────────────────────────────
+let activeDownloadRequest: ClientRequest | null = null;
+let downloadedFilePath: string | null = null;
+let lastDetectedRelease: ReleaseInfo | null = null;
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -41,6 +52,11 @@ export function isNewerVersion(remote: string, local: string): boolean {
     if (rv < lv) return false;
   }
   return false;
+}
+
+/** Get the last detected release info (used by main.ts to store pendingReleaseInfo). */
+export function getLastDetectedRelease(): ReleaseInfo | null {
+  return lastDetectedRelease;
 }
 
 /** Fetch the latest GitHub release using Electron's net module. */
@@ -93,14 +109,148 @@ function fetchLatestRelease(): Promise<ReleaseInfo> {
   });
 }
 
-/** Show a native dialog informing the user about an available update. */
+// ── Download & Install ───────────────────────────────────────────────────────
+
+/**
+ * Download the update asset to a temp directory.
+ * Sends progress events to the renderer via webContents.send().
+ * Handles GitHub 302 redirects to S3/CloudFront.
+ */
+export function downloadUpdate(
+  info: ReleaseInfo,
+  win: BrowserWindow,
+): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const fileName = path.basename(new URL(info.downloadUrl).pathname) || 'update-installer';
+    const destPath = path.join(app.getPath('temp'), fileName);
+    downloadedFilePath = null;
+
+    const fileStream = fs.createWriteStream(destPath);
+
+    function doRequest(url: string) {
+      const request = net.request({ method: 'GET', url });
+      request.setHeader('User-Agent', `ThreadKeeper/${app.getVersion()}`);
+      activeDownloadRequest = request;
+
+      request.on('response', (response) => {
+        // Handle GitHub redirect (302 → S3/CloudFront)
+        if (response.statusCode === 302 || response.statusCode === 301) {
+          const location = response.headers['location'];
+          const redirectUrl = Array.isArray(location) ? location[0] : location;
+          if (redirectUrl) {
+            doRequest(redirectUrl);
+            return;
+          }
+        }
+
+        if (response.statusCode !== 200) {
+          activeDownloadRequest = null;
+          fileStream.close();
+          try { fs.unlinkSync(destPath); } catch { /* ignore */ }
+          reject(new Error(`Download failed: HTTP ${response.statusCode}`));
+          return;
+        }
+
+        const contentLength = response.headers['content-length'];
+        const totalBytes = contentLength
+          ? parseInt(Array.isArray(contentLength) ? contentLength[0] : contentLength, 10)
+          : 0;
+        let receivedBytes = 0;
+
+        response.on('data', (chunk: Buffer) => {
+          receivedBytes += chunk.length;
+          fileStream.write(chunk);
+
+          // Send progress to renderer
+          const percent = totalBytes > 0 ? Math.round((receivedBytes / totalBytes) * 100) : 0;
+          const transferred = (receivedBytes / (1024 * 1024)).toFixed(1);
+          const total = totalBytes > 0 ? (totalBytes / (1024 * 1024)).toFixed(1) : '?';
+          try {
+            win.webContents.send('update-download-progress', {
+              percent,
+              transferred,
+              total,
+            });
+          } catch { /* window may have been closed */ }
+        });
+
+        response.on('end', () => {
+          fileStream.end(() => {
+            activeDownloadRequest = null;
+            downloadedFilePath = destPath;
+            try {
+              win.webContents.send('update-downloaded', { filePath: destPath });
+            } catch { /* ignore */ }
+            resolve(destPath);
+          });
+        });
+
+        response.on('error', (err) => {
+          fileStream.close();
+          activeDownloadRequest = null;
+          try { fs.unlinkSync(destPath); } catch { /* ignore */ }
+          reject(err);
+        });
+      });
+
+      request.on('error', (err) => {
+        fileStream.close();
+        activeDownloadRequest = null;
+        try { fs.unlinkSync(destPath); } catch { /* ignore */ }
+        reject(err);
+      });
+
+      request.end();
+    }
+
+    doRequest(info.downloadUrl);
+  });
+}
+
+/** Cancel an in-progress download and clean up partial file. */
+export function cancelDownload(): void {
+  if (activeDownloadRequest) {
+    activeDownloadRequest.abort();
+    activeDownloadRequest = null;
+  }
+  if (downloadedFilePath) {
+    try { fs.unlinkSync(downloadedFilePath); } catch { /* ignore */ }
+    downloadedFilePath = null;
+  }
+}
+
+/**
+ * Launch the downloaded installer and quit the app.
+ * - Windows: opens .exe installer
+ * - macOS: opens .dmg (mounts it for user to drag to Applications)
+ */
+export async function installUpdate(filePath: string): Promise<void> {
+  if (!filePath || !fs.existsSync(filePath)) {
+    throw new Error('Update file not found');
+  }
+
+  // shell.openPath returns empty string on success, error message on failure
+  const err = await shell.openPath(filePath);
+  if (err) {
+    throw new Error(err);
+  }
+
+  // Give the installer a moment to start, then quit
+  setTimeout(() => {
+    app.quit();
+  }, 1500);
+}
+
+// ── Native Dialog Fallback ───────────────────────────────────────────────────
+
+/** Show a native dialog (fallback when no renderer window is available). */
 async function showUpdateDialog(info: ReleaseInfo): Promise<void> {
   const cfg = loadConfig();
   const i18n = loadTranslations(cfg.language || 'ja');
 
   // Truncate release notes for the dialog
   let notes = info.body || '';
-  if (notes.length > 300) notes = notes.slice(0, 300) + '…';
+  if (notes.length > 300) notes = notes.slice(0, 300) + '\u2026';
 
   const message = t(i18n, 'update_body', { version: info.version })
     .replace('{notes}', notes);
@@ -186,7 +336,25 @@ export async function checkForUpdates(silent: boolean): Promise<void> {
     // Skip if user chose to skip this specific version (silent only)
     if (silent && cfg.skipVersion === release.version) return;
 
-    await showUpdateDialog(release);
+    // Store release info for download
+    lastDetectedRelease = release;
+
+    // Try to send event to renderer window; fallback to native dialog
+    const focusedWindow = BrowserWindow.getFocusedWindow();
+    const allWindows = BrowserWindow.getAllWindows();
+    const targetWindow = focusedWindow ?? allWindows[0];
+
+    if (targetWindow) {
+      targetWindow.webContents.send('update-available', {
+        version: release.version,
+        downloadUrl: release.downloadUrl,
+        htmlUrl: release.htmlUrl,
+        body: release.body,
+      });
+    } else {
+      // No window available — fallback to native dialog
+      await showUpdateDialog(release);
+    }
   } catch (err) {
     console.warn('[TK] Update check failed:', (err as Error).message);
     if (!silent) {

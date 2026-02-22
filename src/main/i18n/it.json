@@ -263,5 +263,14 @@
   "tray_check_update": "\ud83d\udd04 Verifica aggiornamenti",
   "settings_auto_update": "Verifica aggiornamenti all'avvio",
   "settings_auto_update_desc": "Ti avvisa quando \u00e8 disponibile una nuova versione",
-  "setup_help_link": "Hai bisogno di aiuto? Clicca qui \u2192"
+  "setup_help_link": "Hai bisogno di aiuto? Clicca qui \u2192",
+  "update_downloading": "Download dell'aggiornamento in corso\u2026",
+  "update_download_progress": "Download in corso\u2026 {percent}% ({transferred} / {total} MB)",
+  "update_download_complete": "Aggiornamento scaricato",
+  "update_install_restart": "Installa e riavvia",
+  "update_cancel_download": "Annulla",
+  "update_download_error": "Download non riuscito: {error}",
+  "update_new_version": "v{version} \u00e8 disponibile",
+  "update_skip_version": "Salta questa versione",
+  "update_preparing": "Preparazione dell'installazione\u2026"
 }

@@ -263,5 +263,14 @@
   "tray_check_update": "\ud83d\udd04 Check for Updates",
   "settings_auto_update": "Check for updates on startup",
   "settings_auto_update_desc": "Notifies you when a new version is available",
-  "setup_help_link": "Need help? Click here →"
+  "setup_help_link": "Need help? Click here →",
+  "update_downloading": "Downloading update\u2026",
+  "update_download_progress": "Downloading\u2026 {percent}% ({transferred} / {total} MB)",
+  "update_download_complete": "Update downloaded",
+  "update_install_restart": "Install & Restart",
+  "update_cancel_download": "Cancel",
+  "update_download_error": "Download failed: {error}",
+  "update_new_version": "v{version} is available",
+  "update_skip_version": "Skip this version",
+  "update_preparing": "Preparing to install\u2026"
 }

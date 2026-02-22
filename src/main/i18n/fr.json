@@ -263,5 +263,14 @@
   "tray_check_update": "\ud83d\udd04 V\u00e9rifier les mises \u00e0 jour",
   "settings_auto_update": "V\u00e9rifier les mises \u00e0 jour au d\u00e9marrage",
   "settings_auto_update_desc": "Vous avertit lorsqu'une nouvelle version est disponible",
-  "setup_help_link": "Besoin d'aide ? Cliquez ici \u2192"
+  "setup_help_link": "Besoin d'aide ? Cliquez ici \u2192",
+  "update_downloading": "T\u00e9l\u00e9chargement de la mise \u00e0 jour\u2026",
+  "update_download_progress": "T\u00e9l\u00e9chargement\u2026 {percent}% ({transferred} / {total} Mo)",
+  "update_download_complete": "Mise \u00e0 jour t\u00e9l\u00e9charg\u00e9e",
+  "update_install_restart": "Installer et red\u00e9marrer",
+  "update_cancel_download": "Annuler",
+  "update_download_error": "\u00c9chec du t\u00e9l\u00e9chargement : {error}",
+  "update_new_version": "v{version} est disponible",
+  "update_skip_version": "Ignorer cette version",
+  "update_preparing": "Pr\u00e9paration de l'installation\u2026"
 }

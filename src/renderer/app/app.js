@@ -9,6 +9,11 @@ let isCollecting = false; // true while context is being collected (before pendi
 let currentLayout = localStorage.getItem('ck-layout') || 'cards';
 let i18n = {}; // loaded translations
 
+// ── Update state ──
+let updateState = 'idle'; // idle | available | downloading | ready | error
+let updateInfo = null;    // { version, downloadUrl, htmlUrl, body }
+let downloadedFilePath = null;
+
 // ─── i18n ─────────────────────────────────────────────────────────────────────
 function t(key, params) {
   let val = i18n[key];
@@ -44,6 +49,116 @@ function applyTranslations() {
     const val = i18n[key];
     if (val && typeof val === 'string') el.label = val;
   });
+}
+
+// ─── Update Banner ───────────────────────────────────────────────────────────
+function renderUpdateBanner() {
+  const banner = document.getElementById('update-banner');
+  const titleEl = document.getElementById('update-banner-title');
+  const bodyEl = document.getElementById('update-banner-body');
+  const actionsEl = document.getElementById('update-banner-actions');
+  const progressWrap = document.getElementById('update-progress-wrap');
+  const progressFill = document.getElementById('update-progress-fill');
+  const progressText = document.getElementById('update-progress-text');
+
+  if (!banner) return;
+
+  if (updateState === 'idle') {
+    banner.classList.remove('visible');
+    return;
+  }
+
+  banner.classList.add('visible');
+
+  if (updateState === 'available') {
+    titleEl.textContent = t('update_new_version', { version: updateInfo.version });
+    let notes = updateInfo.body || '';
+    if (notes.length > 200) notes = notes.slice(0, 200) + '\u2026';
+    bodyEl.textContent = notes;
+    bodyEl.style.display = notes ? '' : 'none';
+    actionsEl.style.display = 'flex';
+    progressWrap.classList.remove('visible');
+
+    // Reset action buttons
+    actionsEl.innerHTML = '';
+    const btnDownload = document.createElement('button');
+    btnDownload.className = 'btn-primary';
+    btnDownload.style.cssText = 'font-size:12px;padding:6px 16px;';
+    btnDownload.textContent = t('update_download');
+    btnDownload.onclick = async () => {
+      updateState = 'downloading';
+      renderUpdateBanner();
+      await window.electronAPI.startDownloadUpdate();
+    };
+    const btnSkip = document.createElement('button');
+    btnSkip.className = 'btn-secondary';
+    btnSkip.style.cssText = 'font-size:12px;padding:6px 14px;';
+    btnSkip.textContent = t('update_skip_version');
+    btnSkip.onclick = async () => {
+      await window.electronAPI.skipUpdateVersion(updateInfo.version);
+      updateState = 'idle';
+      updateInfo = null;
+      renderUpdateBanner();
+    };
+    actionsEl.appendChild(btnDownload);
+    actionsEl.appendChild(btnSkip);
+  }
+
+  if (updateState === 'downloading') {
+    titleEl.textContent = t('update_downloading');
+    bodyEl.style.display = 'none';
+    actionsEl.style.display = 'flex';
+    actionsEl.innerHTML = '';
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'btn-secondary';
+    btnCancel.style.cssText = 'font-size:12px;padding:6px 14px;';
+    btnCancel.textContent = t('update_cancel_download');
+    btnCancel.onclick = async () => {
+      await window.electronAPI.cancelDownloadUpdate();
+      updateState = 'idle';
+      updateInfo = null;
+      renderUpdateBanner();
+    };
+    actionsEl.appendChild(btnCancel);
+    progressWrap.classList.add('visible');
+    progressFill.style.width = '0%';
+    progressText.textContent = t('update_download_progress', { percent: 0, transferred: '0', total: '?' });
+  }
+
+  if (updateState === 'ready') {
+    titleEl.textContent = t('update_download_complete');
+    bodyEl.style.display = 'none';
+    actionsEl.style.display = 'flex';
+    actionsEl.innerHTML = '';
+    const btnInstall = document.createElement('button');
+    btnInstall.className = 'btn-primary';
+    btnInstall.style.cssText = 'font-size:12px;padding:6px 16px;';
+    btnInstall.textContent = t('update_install_restart');
+    btnInstall.onclick = async () => {
+      btnInstall.disabled = true;
+      btnInstall.textContent = t('update_preparing');
+      await window.electronAPI.installUpdate(downloadedFilePath);
+    };
+    actionsEl.appendChild(btnInstall);
+    progressWrap.classList.remove('visible');
+  }
+
+  if (updateState === 'error') {
+    bodyEl.style.display = 'none';
+    actionsEl.style.display = 'flex';
+    actionsEl.innerHTML = '';
+    const btnRetry = document.createElement('button');
+    btnRetry.className = 'btn-primary';
+    btnRetry.style.cssText = 'font-size:12px;padding:6px 16px;';
+    btnRetry.textContent = t('update_download');
+    btnRetry.onclick = async () => {
+      updateState = 'downloading';
+      renderUpdateBanner();
+      await window.electronAPI.startDownloadUpdate();
+    };
+    actionsEl.appendChild(btnRetry);
+    progressWrap.classList.remove('visible');
+  }
 }
 
 // ─── Utilities ────────────────────────────────────────────────────────────────
@@ -1173,6 +1288,41 @@ window.electronAPI.onSessionSummaryReady((aiSummary) => {
   if (saveBtn) saveBtn.disabled = false;
 });
 
+// ─── Update events ────────────────────────────────────────────────────────────
+window.electronAPI.onUpdateAvailable((info) => {
+  updateInfo = info;
+  updateState = 'available';
+  renderUpdateBanner();
+});
+
+window.electronAPI.onUpdateDownloadProgress((p) => {
+  const progressFill = document.getElementById('update-progress-fill');
+  const progressText = document.getElementById('update-progress-text');
+  if (progressFill) progressFill.style.width = p.percent + '%';
+  if (progressText) {
+    progressText.textContent = t('update_download_progress', {
+      percent: p.percent,
+      transferred: p.transferred,
+      total: p.total,
+    });
+  }
+});
+
+window.electronAPI.onUpdateDownloaded((info) => {
+  downloadedFilePath = info.filePath;
+  updateState = 'ready';
+  renderUpdateBanner();
+});
+
+window.electronAPI.onUpdateError((info) => {
+  updateState = 'error';
+  const titleEl = document.getElementById('update-banner-title');
+  if (titleEl) {
+    titleEl.textContent = t('update_download_error', { error: info.error || '' });
+  }
+  renderUpdateBanner();
+});
+
 // ─── Init ─────────────────────────────────────────────────────────────────────
 async function init() {
   const [loadedSessions, loadedConfig, loadedPending, captureState, loadedInitialTab, loadedI18n] = await Promise.all([
@@ -1303,6 +1453,13 @@ async function init() {
     e.preventDefault();
     const filePath = link.dataset.path;
     if (filePath) window.electronAPI.openPath(filePath);
+  });
+
+  // Update banner close button
+  document.getElementById('update-banner-close')?.addEventListener('click', () => {
+    if (updateState === 'downloading') return; // Don't allow closing during download
+    updateState = 'idle';
+    renderUpdateBanner();
   });
 
   // Initial tab + badge

@@ -17,7 +17,8 @@ import { loadConfig, saveConfig, isConfigured, migrateFromDotenv } from './confi
 import { startRelayServer } from './session/tab-relay-server';
 import { loadTranslations, clearTranslationCache, getAvailableLanguages, t } from './i18n';
 import { isMac, isWin, getAppDataDir, getDefaultShortcuts, getRecentFilesDir } from './platform';
-import { checkForUpdates } from './updater';
+import { checkForUpdates, downloadUpdate, cancelDownload, installUpdate, getLastDetectedRelease } from './updater';
+import type { ReleaseInfo } from './updater';
 
 // ─── Single instance ──────────────────────────────────────────────────────────
 const gotTheLock = app.requestSingleInstanceLock();
@@ -41,6 +42,7 @@ let pendingSession: (SessionData & { aiSummary: string }) | null = null;
 let isCapturing = false;
 let isQuitting = false;
 let initialTab = 'sessions'; // consumed once by get-initial-tab IPC
+let pendingReleaseInfo: ReleaseInfo | null = null;
 
 // ─── Main Window (single unified window) ─────────────────────────────────────
 function openMainWindow(tab = 'sessions'): void {
@@ -196,7 +198,7 @@ function refreshTrayMenu(): void {
     { label: `${t(i18n, 'tray_sessions')}    ${openKey}`,    click: () => openMainWindow('sessions') },
     { type: 'separator' },
     { label: t(i18n, 'tray_settings'), click: () => openMainWindow('settings') },
-    { label: t(i18n, 'tray_check_update'), click: () => checkForUpdates(false) },
+    { label: t(i18n, 'tray_check_update'), click: () => { openMainWindow('settings'); checkForUpdates(false); } },
     { type: 'separator' },
     { label: t(i18n, 'tray_quit'), click: () => app.exit(0) },
   ]));
@@ -436,8 +438,52 @@ function registerIpc(): void {
     clipboard.writeText(String(text));
   });
 
-  // ── Update check ──
-  ipcMain.handle('check-for-updates', () => checkForUpdates(false));
+  // ── Update check & download ──
+  ipcMain.handle('check-for-updates', async () => {
+    await checkForUpdates(false);
+    const release = getLastDetectedRelease();
+    if (release) pendingReleaseInfo = release;
+  });
+
+  ipcMain.handle('start-download-update', async () => {
+    if (!pendingReleaseInfo) {
+      return { success: false, error: 'No update available' };
+    }
+    const targetWindow = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+    if (!targetWindow) {
+      return { success: false, error: 'No window available' };
+    }
+    try {
+      const filePath = await downloadUpdate(pendingReleaseInfo, targetWindow);
+      return { success: true, filePath };
+    } catch (err) {
+      const errorMessage = (err as Error).message;
+      try {
+        targetWindow.webContents.send('update-error', { error: errorMessage });
+      } catch { /* ignore */ }
+      return { success: false, error: errorMessage };
+    }
+  });
+
+  ipcMain.handle('cancel-download-update', () => {
+    cancelDownload();
+    return { success: true };
+  });
+
+  ipcMain.handle('install-update', async (_e, filePath: string) => {
+    try {
+      await installUpdate(filePath);
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  });
+
+  ipcMain.handle('skip-update-version', (_e, version: string) => {
+    saveConfig({ skipVersion: version });
+    pendingReleaseInfo = null;
+    return { success: true };
+  });
 }
 
 // ─── App lifecycle ────────────────────────────────────────────────────────────
@@ -468,10 +514,14 @@ app.whenReady().then(() => {
   console.log('[TK] Started. Configured:', isConfigured());
 
   // Auto-update check after 5 seconds
-  setTimeout(() => {
-    checkForUpdates(true).catch(err => {
+  setTimeout(async () => {
+    try {
+      await checkForUpdates(true);
+      const release = getLastDetectedRelease();
+      if (release) pendingReleaseInfo = release;
+    } catch (err) {
       console.warn('[TK] Auto update check failed:', (err as Error).message);
-    });
+    }
   }, 5000);
 });
 

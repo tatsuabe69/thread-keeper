@@ -822,6 +822,64 @@
     ::-webkit-scrollbar { width: 4px; height: 4px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+    /* ════════════════════════════════════════
+       UPDATE BANNER
+    ════════════════════════════════════════ */
+    .update-banner {
+      display: none;
+      background: var(--surface);
+      border: 1px solid var(--accent);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 0 12px 12px;
+      margin: 0 20px 16px;
+      padding: 14px 18px;
+      box-shadow: 0 2px 12px rgba(26,86,232,0.08);
+      animation: slideDown 0.25s ease;
+    }
+    .update-banner.visible { display: block; }
+    @keyframes slideDown {
+      from { opacity: 0; transform: translateY(-8px); }
+      to   { opacity: 1; transform: none; }
+    }
+    .update-banner-header {
+      display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+    }
+    .update-banner-icon { font-size: 16px; flex-shrink: 0; }
+    .update-banner-title {
+      font-size: 13px; font-weight: 500; color: var(--text-1); flex: 1;
+    }
+    .update-banner-close {
+      background: none; border: none; cursor: pointer;
+      color: var(--text-3); font-size: 16px; padding: 2px;
+      transition: color 0.15s;
+    }
+    .update-banner-close:hover { color: var(--text-1); }
+    .update-banner-body {
+      font-size: 12px; color: var(--text-2); line-height: 1.6;
+      margin-bottom: 10px; max-height: 60px; overflow-y: auto;
+    }
+    .update-banner-actions {
+      display: flex; align-items: center; gap: 8px;
+    }
+    .update-progress-wrap {
+      display: none; width: 100%; margin-top: 8px;
+    }
+    .update-progress-wrap.visible { display: block; }
+    .update-progress-bar {
+      width: 100%; height: 6px;
+      background: var(--surface-3, var(--border));
+      border-radius: 3px; overflow: hidden;
+    }
+    .update-progress-fill {
+      height: 100%; width: 0%;
+      background: var(--accent);
+      border-radius: 3px;
+      transition: width 0.3s ease;
+    }
+    .update-progress-text {
+      font-size: 11px; color: var(--text-3); margin-top: 4px; font-weight: 300;
+    }
   </style>
 </head>
 <body>
@@ -852,6 +910,26 @@
 
 <!-- ═══════ CONTENT ═══════ -->
 <main class="content">
+
+  <!-- Update banner (shown when update is available) -->
+  <div class="update-banner" id="update-banner">
+    <div class="update-banner-header">
+      <span class="update-banner-icon">🔄</span>
+      <span class="update-banner-title" id="update-banner-title"></span>
+      <button class="update-banner-close" id="update-banner-close" title="Close">&times;</button>
+    </div>
+    <div class="update-banner-body" id="update-banner-body"></div>
+    <div class="update-banner-actions" id="update-banner-actions">
+      <button class="btn-primary" id="btn-update-download" style="font-size:12px;padding:6px 16px;"></button>
+      <button class="btn-secondary" id="btn-update-skip" style="font-size:12px;padding:6px 14px;"></button>
+    </div>
+    <div class="update-progress-wrap" id="update-progress-wrap">
+      <div class="update-progress-bar">
+        <div class="update-progress-fill" id="update-progress-fill"></div>
+      </div>
+      <div class="update-progress-text" id="update-progress-text"></div>
+    </div>
+  </div>
 
   <!-- Sessions -->
   <div class="panel active" id="panel-sessions">

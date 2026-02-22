@@ -263,5 +263,14 @@
   "tray_check_update": "🔄 アップデートを確認",
   "settings_auto_update": "起動時にアップデートを自動確認",
   "settings_auto_update_desc": "新しいバージョンが公開されていれば通知します",
-  "setup_help_link": "分かんない方はこちら →"
+  "setup_help_link": "分かんない方はこちら →",
+  "update_downloading": "アップデートをダウンロード中…",
+  "update_download_progress": "ダウンロード中… {percent}%（{transferred} / {total} MB）",
+  "update_download_complete": "アップデートのダウンロード完了",
+  "update_install_restart": "インストールして再起動",
+  "update_cancel_download": "キャンセル",
+  "update_download_error": "ダウンロード失敗: {error}",
+  "update_new_version": "v{version} が利用可能です",
+  "update_skip_version": "このバージョンをスキップ",
+  "update_preparing": "インストールの準備中…"
 }
